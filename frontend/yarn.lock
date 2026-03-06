@@ -4238,7 +4238,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@store/auth@npm:*, @store/auth@workspace:packages/store/auth":
+"@store/auth@npm:*, @store/auth@workspace:*, @store/auth@workspace:packages/store/auth":
   version: 0.0.0-use.local
   resolution: "@store/auth@workspace:packages/store/auth"
   dependencies:
@@ -4250,7 +4250,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@store/root@npm:*, @store/root@workspace:packages/store/root":
+"@store/root@npm:*, @store/root@workspace:*, @store/root@workspace:packages/store/root":
   version: 0.0.0-use.local
   resolution: "@store/root@workspace:packages/store/root"
   dependencies:
@@ -7459,6 +7459,8 @@ __metadata:
     "@pages/settings": "workspace:*"
     "@pages/settings-error": "workspace:*"
     "@pages/settings-success": "workspace:*"
+    "@store/auth": "workspace:*"
+    "@store/root": "workspace:*"
     "@types/node": "npm:^24.3.0"
     "@types/react": "npm:19.2.4"
     "@types/react-dom": "npm:19.2.2"
