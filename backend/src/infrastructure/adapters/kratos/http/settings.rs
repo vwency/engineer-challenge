@@ -3,6 +3,7 @@ use crate::domain::ports::settings::{SettingsData, SettingsPort};
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use async_trait::async_trait;
+use reqwest::StatusCode;
 use std::sync::Arc;
 use tracing::debug;
 
@@ -93,7 +94,16 @@ impl SettingsPort for KratosSettingsAdapter {
             &flow.cookies,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| match (e.status, e.message_id()) {
+            (StatusCode::FORBIDDEN, _) => DomainError::PrivilegedSessionRequired,
+            (StatusCode::UNAUTHORIZED, _) => DomainError::NotAuthenticated,
+            (StatusCode::GONE, _) => DomainError::FlowNotFound,
+            (StatusCode::BAD_REQUEST, 4000010) => {
+                DomainError::InvalidData("Password is too weak".to_string())
+            }
+            (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().to_string()),
+            _ => DomainError::Network(e.to_string()),
+        })?;
 
         debug!("Settings response: {:?}", result.data);
         debug!("Settings response cookies: {:?}", result.cookies);

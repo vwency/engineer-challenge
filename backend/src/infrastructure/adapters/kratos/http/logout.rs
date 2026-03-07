@@ -1,61 +1,24 @@
-use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::DomainError;
+use crate::domain::ports::identity::IdentityPort;
 use crate::domain::ports::session::SessionPort;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
+use crate::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
 use async_trait::async_trait;
-use reqwest::header;
+use reqwest::{StatusCode, header};
 use std::sync::Arc;
 
 pub struct KratosSessionAdapter {
     client: Arc<KratosClient>,
+    identity_adapter: KratosIdentityAdapter,
 }
 
 impl KratosSessionAdapter {
     pub fn new(client: Arc<KratosClient>) -> Self {
-        Self { client }
-    }
-
-    pub async fn get_current_user(&self, cookie: &str) -> Result<UserProfile, DomainError> {
-        let url =
-            format!("{}/sessions/whoami", self.client.public_url).replace("localhost", "127.0.0.1");
-
-        let response = self
-            .client
-            .client
-            .get(&url)
-            .header(header::COOKIE, cookie)
-            .send()
-            .await
-            .map_err(|e| DomainError::Network(e.to_string()))?;
-
-        if !response.status().is_success() {
-            return Err(DomainError::NotAuthenticated);
+        let identity_adapter = KratosIdentityAdapter::new(client.clone());
+        Self {
+            client,
+            identity_adapter,
         }
-
-        let session_data: serde_json::Value = response
-            .json()
-            .await
-            .map_err(|e| DomainError::Network(e.to_string()))?;
-
-        let email = session_data["identity"]["traits"]["email"]
-            .as_str()
-            .ok_or_else(|| DomainError::Unknown("Email not found".to_string()))?
-            .to_string();
-
-        let username = session_data["identity"]["traits"]["username"]
-            .as_str()
-            .ok_or_else(|| DomainError::Unknown("Username not found".to_string()))?
-            .to_string();
-
-        let geo_location = session_data["identity"]["traits"]["geo_location"]
-            .as_str()
-            .map(|s| s.to_string());
-
-        Ok(UserProfile {
-            email,
-            username,
-            geo_location,
-        })
     }
 
     pub async fn is_recovery_session(&self, cookie: Option<&str>) -> bool {
@@ -103,10 +66,20 @@ impl KratosSessionAdapter {
             .await
             .map_err(|e| DomainError::Network(e.to_string()))?;
 
-        if !response.status().is_success() {
-            return Err(DomainError::Network(
-                "Failed to get logout flow".to_string(),
-            ));
+        match response.status() {
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                return Err(DomainError::NotAuthenticated);
+            }
+            StatusCode::TOO_MANY_REQUESTS => {
+                return Err(DomainError::Network("Rate limit exceeded".to_string()));
+            }
+            s if !s.is_success() => {
+                return Err(DomainError::Network(format!(
+                    "Failed to get logout flow: {}",
+                    s
+                )));
+            }
+            _ => {}
         }
 
         let data: serde_json::Value = response
@@ -135,27 +108,26 @@ impl SessionPort for KratosSessionAdapter {
             .await
             .map_err(|e| DomainError::Network(e.to_string()))?;
 
-        let status = response.status();
-        if status.is_success() || status == 302 || status == 303 {
-            return Ok(());
+        match response.status() {
+            s if s.is_success() || s == StatusCode::FOUND || s == StatusCode::SEE_OTHER => Ok(()),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(DomainError::NotAuthenticated),
+            s => {
+                let error_text = response.text().await.unwrap_or_else(|_| s.to_string());
+                Err(DomainError::Unknown(format!(
+                    "Logout failed: {}",
+                    error_text
+                )))
+            }
         }
-
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-
-        Err(DomainError::Unknown(format!(
-            "Logout failed: {}",
-            error_text
-        )))
     }
 
     async fn check_active_session(&self, cookie: Option<&str>) -> bool {
         if let Some(cookie_value) = cookie {
-            if self.get_current_user(cookie_value).await.is_ok() {
-                return true;
-            }
+            return self
+                .identity_adapter
+                .get_current_user(cookie_value)
+                .await
+                .is_ok();
         }
         false
     }

@@ -3,6 +3,7 @@ use crate::domain::ports::registration::{RegistrationData, RegistrationPort};
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use async_trait::async_trait;
+use reqwest::StatusCode;
 use std::sync::Arc;
 
 pub struct KratosRegistrationAdapter {
@@ -66,7 +67,25 @@ impl RegistrationPort for KratosRegistrationAdapter {
             &flow.cookies,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| {
+            let id = e.body["ui"]["messages"][0]["id"].as_u64().unwrap_or(0);
+            match (e.status, id) {
+                (StatusCode::BAD_REQUEST, 4000007) => {
+                    DomainError::Conflict("Email already exists".to_string())
+                }
+                (StatusCode::BAD_REQUEST, 4000010) => {
+                    DomainError::InvalidData("Password is too weak".to_string())
+                }
+                (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(
+                    e.body["ui"]["messages"][0]["text"]
+                        .as_str()
+                        .unwrap_or("Invalid registration data")
+                        .to_string(),
+                ),
+                (StatusCode::GONE, _) => DomainError::FlowNotFound,
+                _ => DomainError::Network(e.to_string()),
+            }
+        })?;
 
         if result.data.get("session").is_none() && result.data.get("identity").is_none() {
             return Err(DomainError::Unknown(

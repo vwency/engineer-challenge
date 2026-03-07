@@ -5,6 +5,7 @@ use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 use async_trait::async_trait;
+use reqwest::StatusCode;
 use std::sync::Arc;
 use tracing::{debug, error};
 
@@ -40,7 +41,7 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         flow.flow["id"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or_else(|| DomainError::FlowNotFound)
+            .ok_or(DomainError::FlowNotFound)
     }
 
     async fn complete_login(
@@ -89,7 +90,16 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         .await
         .map_err(|e| {
             error!("Failed to post login flow: {}", e);
-            DomainError::Network(e.to_string())
+            match (e.status, e.message_id()) {
+                (StatusCode::BAD_REQUEST, 4000006) => DomainError::InvalidCredentials,
+                (StatusCode::BAD_REQUEST, 4000010) => DomainError::InvalidCredentials,
+                (StatusCode::BAD_REQUEST, _) => {
+                    DomainError::InvalidData(e.message_text().to_string())
+                }
+                (StatusCode::GONE, _) => DomainError::FlowNotFound,
+                (StatusCode::UNAUTHORIZED, _) => DomainError::NotAuthenticated,
+                _ => DomainError::Network(e.to_string()),
+            }
         })?;
 
         debug!("Received cookies: {:?}", result.cookies);

@@ -5,6 +5,7 @@ use crate::domain::ports::verification::{
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use async_trait::async_trait;
+use reqwest::StatusCode;
 use std::sync::Arc;
 
 pub struct KratosVerificationAdapter {
@@ -14,6 +15,23 @@ pub struct KratosVerificationAdapter {
 impl KratosVerificationAdapter {
     pub fn new(client: Arc<KratosClient>) -> Self {
         Self { client }
+    }
+}
+
+fn map_verification_error(
+    e: crate::infrastructure::adapters::kratos::models::errors::KratosFlowError,
+) -> DomainError {
+    match (e.status, e.message_id()) {
+        (StatusCode::BAD_REQUEST, 4070006) => {
+            DomainError::InvalidData("Invalid verification code".to_string())
+        }
+        (StatusCode::BAD_REQUEST, 4070001) => {
+            DomainError::InvalidData("Invalid email address".to_string())
+        }
+        (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().to_string()),
+        (StatusCode::GONE, _) => DomainError::FlowNotFound,
+        (StatusCode::UNAUTHORIZED, _) => DomainError::NotAuthenticated,
+        _ => DomainError::Network(e.to_string()),
     }
 }
 
@@ -54,7 +72,7 @@ impl VerificationPort for KratosVerificationAdapter {
             &flow.cookies,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(map_verification_error)?;
 
         Ok(())
     }
@@ -94,7 +112,7 @@ impl VerificationPort for KratosVerificationAdapter {
             &flow.cookies,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(map_verification_error)?;
 
         Ok(())
     }
@@ -134,7 +152,7 @@ impl VerificationPort for KratosVerificationAdapter {
             &flow.cookies,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(map_verification_error)?;
 
         Ok(())
     }
