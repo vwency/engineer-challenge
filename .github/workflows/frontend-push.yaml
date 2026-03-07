@@ -12,7 +12,7 @@ jobs:
     with:
       image-name: ${{ github.repository }}/frontend-entrypoint
       context: "./frontend"
-      dockerfile: "./Dockerfile"
+      dockerfile: "./frontend/Dockerfile"
     secrets:
       personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
