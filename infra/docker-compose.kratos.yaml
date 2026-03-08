@@ -25,7 +25,7 @@ services:
       DSN: postgres://kratos:kratos_secret@postgres-kratos:5432/kratos?sslmode=disable
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
     volumes:
-      - ../config/kratos:/etc/config/kratos
+      - ./config/kratos:/etc/config/kratos
     networks:
       - kratos-network
     depends_on:
@@ -43,7 +43,7 @@ services:
     environment:
       LOG_LEVEL: debug
     volumes:
-      - ../config/kratos:/etc/config/kratos
+      - ./config/kratos:/etc/config/kratos
     networks:
       - kratos-network
     depends_on:

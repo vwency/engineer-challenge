@@ -41,7 +41,7 @@ services:
     container_name: hydra
     command: serve all --dev -c /etc/config/hydra/hydra.yaml
     volumes:
-      - ../config/hydra/hydra.yaml:/etc/config/hydra/hydra.yaml:ro
+      - ./config/hydra/hydra.yaml:/etc/config/hydra/hydra.yaml:ro
     ports:
       - "4444:4444"
       - "4445:4445"
@@ -61,7 +61,7 @@ services:
     image: oryd/hydra:v2.3.0
     container_name: hydra-client-init
     volumes:
-      - ../config/hydra/register_client.sh:/register_client.sh:ro
+      - ./config/hydra/register_client.sh:/register_client.sh:ro
     entrypoint: ["/bin/sh", "/register_client.sh"]
     networks:
       - kratos-network

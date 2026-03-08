@@ -1,7 +1,7 @@
 services:
   rust-kratos:
     build:
-      context: ../
+      context: ./
       dockerfile: Dockerfile
     container_name: rust_kratos
     ports:

@@ -5,7 +5,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ../config/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./config/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -44,7 +44,7 @@ services:
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/node-exporter-full.json
     volumes:
       - grafana-data:/var/lib/grafana
-      - ../config/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/monitoring/grafana/provisioning:/etc/grafana/provisioning
     networks:
       - infra-network
     depends_on:
@@ -71,7 +71,7 @@ services:
     ports:
       - "9093:9093"
     volumes:
-      - ../config/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./config/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
       - alertmanager-data:/alertmanager
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
@@ -103,7 +103,7 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ../config/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - ./config/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
@@ -114,7 +114,7 @@ services:
     image: grafana/promtail:latest
     container_name: promtail
     volumes:
-      - ../config/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - ./config/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/config.yml

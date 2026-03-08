@@ -12,7 +12,7 @@ services:
       - "4455:4455"
       - "4456:4456"
     volumes:
-      - ../config/oathkeeper:/etc/config/oathkeeper:ro
+      - ./config/oathkeeper:/etc/config/oathkeeper:ro
     networks:
       - kratos-network
     restart: unless-stopped

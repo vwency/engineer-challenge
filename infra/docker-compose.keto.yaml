@@ -30,7 +30,7 @@ services:
     container_name: keto-migrate
     command: migrate up -y -c /etc/config/keto/keto.yaml
     volumes:
-      - ../config/keto:/etc/config/keto:ro
+      - ./config/keto:/etc/config/keto:ro
     networks:
       - kratos-network
     depends_on:
@@ -46,7 +46,7 @@ services:
       - "4466:4466" # read api
       - "4467:4467" # write api
     volumes:
-      - ../config/keto:/etc/config/keto:ro
+      - ./config/keto:/etc/config/keto:ro
     networks:
       - kratos-network
     depends_on:

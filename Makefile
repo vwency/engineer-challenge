@@ -1,13 +1,11 @@
 .PHONY: up down
 
 up:
-	$(MAKE) -C backend kratos-up
-	$(MAKE) -C backend mailhog-up
-	$(MAKE) -C backend app-up
+	$(MAKE) -C backend/rust-kratos infra-up
+	$(MAKE) -C backend/rust-kratos  up
 	$(MAKE) -C frontend up
 
 down:
-	$(MAKE) -C backend kratos-down
-	$(MAKE) -C backend mailhog-down
-	$(MAKE) -C backend app-down
+	$(MAKE) -C backend/rust-kratos infra-down
+	$(MAKE) -C backend/rust-kratos  down
 	$(MAKE) -C frontend down
