@@ -3,38 +3,29 @@ use async_trait::async_trait;
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
-pub struct VerifyByLinkRequest {
-    pub email: String,
-    pub transient_payload: Option<Value>,
-}
+pub struct TransientPayload(pub Value);
 
 #[derive(Debug, Clone)]
-pub struct SendCodeRequest {
-    pub email: String,
-    pub transient_payload: Option<Value>,
-}
-
-#[derive(Debug, Clone)]
-pub struct SubmitCodeRequest {
-    pub code: String,
-    pub transient_payload: Option<Value>,
+pub enum VerificationCommand {
+    ByLink {
+        email: String,
+        transient_payload: Option<TransientPayload>,
+    },
+    SendCode {
+        email: String,
+        transient_payload: Option<TransientPayload>,
+    },
+    SubmitCode {
+        code: String,
+        transient_payload: Option<TransientPayload>,
+    },
 }
 
 #[async_trait]
 pub trait VerificationPort: Send + Sync {
-    async fn verify_by_link(
+    async fn verify(
         &self,
-        request: VerifyByLinkRequest,
+        command: VerificationCommand,
         cookie: Option<&str>,
-    ) -> Result<(), DomainError>;
-    async fn send_verification_code(
-        &self,
-        request: SendCodeRequest,
-        cookie: Option<&str>,
-    ) -> Result<(), DomainError>;
-    async fn submit_verification_code(
-        &self,
-        request: SubmitCodeRequest,
-        cookie: &str,
     ) -> Result<(), DomainError>;
 }

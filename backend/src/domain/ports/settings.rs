@@ -1,16 +1,27 @@
 use crate::domain::errors::DomainError;
 use async_trait::async_trait;
+use serde_json::Value;
+
+#[derive(Debug, Clone)]
+pub enum SettingsCommand {
+    Password {
+        password: String,
+    },
+    Profile {
+        traits: Value,
+    },
+    LookupSecret {
+        confirm: Option<bool>,
+        disable: Option<bool>,
+        regenerate: Option<bool>,
+        reveal: Option<bool>,
+    },
+}
 
 #[derive(Debug, Clone)]
 pub struct SettingsData {
-    pub method: String,
-    pub password: Option<String>,
-    pub traits: Option<serde_json::Value>,
-    pub lookup_secret_confirm: Option<bool>,
-    pub lookup_secret_disable: Option<bool>,
-    pub lookup_secret_regenerate: Option<bool>,
-    pub lookup_secret_reveal: Option<bool>,
-    pub transient_payload: Option<serde_json::Value>,
+    pub command: SettingsCommand,
+    pub transient_payload: Option<Value>,
 }
 
 #[async_trait]

@@ -1,7 +1,8 @@
-use crate::domain::ports::settings::SettingsData;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
-use crate::presentation::api::graphql::inputs::inputs::UpdateSettingsInput;
+use crate::presentation::api::graphql::inputs::inputs::{
+    UpdateLookupSecretInput, UpdatePasswordInput, UpdateProfileInput,
+};
 use async_graphql::{Context, Object, Result};
 use std::sync::Arc;
 
@@ -10,10 +11,32 @@ pub struct SettingsMutation;
 
 #[Object]
 impl SettingsMutation {
-    async fn update_settings(
+    async fn update_password(
         &self,
         ctx: &Context<'_>,
-        input: UpdateSettingsInput,
+        input: UpdatePasswordInput,
+    ) -> Result<String> {
+        self.execute_settings(ctx, input.into()).await
+    }
+
+    async fn update_profile(&self, ctx: &Context<'_>, input: UpdateProfileInput) -> Result<String> {
+        self.execute_settings(ctx, input.into()).await
+    }
+
+    async fn update_lookup_secret(
+        &self,
+        ctx: &Context<'_>,
+        input: UpdateLookupSecretInput,
+    ) -> Result<String> {
+        self.execute_settings(ctx, input.into()).await
+    }
+}
+
+impl SettingsMutation {
+    async fn execute_settings(
+        &self,
+        ctx: &Context<'_>,
+        data: crate::domain::ports::settings::SettingsData,
     ) -> Result<String> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
         let cookie = ctx
@@ -24,7 +47,7 @@ impl SettingsMutation {
 
         let (state, cookies) = use_cases
             .update_settings
-            .execute(SettingsData::from(input), cookie)
+            .execute(data, cookie)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 

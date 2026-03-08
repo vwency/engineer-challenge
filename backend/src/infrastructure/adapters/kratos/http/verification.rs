@@ -1,7 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::ports::verification::{
-    SendCodeRequest, SubmitCodeRequest, VerificationPort, VerifyByLinkRequest,
-};
+use crate::domain::ports::verification::{VerificationCommand, VerificationPort};
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use async_trait::async_trait;
@@ -15,6 +13,27 @@ pub struct KratosVerificationAdapter {
 impl KratosVerificationAdapter {
     pub fn new(client: Arc<KratosClient>) -> Self {
         Self { client }
+    }
+
+    async fn fetch_verification_flow(
+        &self,
+        cookie: Option<&str>,
+    ) -> Result<(String, String, Vec<String>), DomainError> {
+        let flow = fetch_flow(
+            &self.client.client,
+            &self.client.public_url,
+            "verification",
+            cookie,
+        )
+        .await
+        .map_err(|e| DomainError::Network(e.to_string()))?;
+
+        let flow_id = flow.flow["id"]
+            .as_str()
+            .ok_or(DomainError::FlowNotFound)?
+            .to_string();
+
+        Ok((flow_id, flow.csrf_token, flow.cookies))
     }
 }
 
@@ -37,119 +56,54 @@ fn map_verification_error(
 
 #[async_trait]
 impl VerificationPort for KratosVerificationAdapter {
-    async fn verify_by_link(
+    async fn verify(
         &self,
-        request: VerifyByLinkRequest,
+        command: VerificationCommand,
         cookie: Option<&str>,
     ) -> Result<(), DomainError> {
-        let flow = fetch_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "verification",
-            cookie,
-        )
-        .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        let (flow_id, csrf_token, cookies) = self.fetch_verification_flow(cookie).await?;
 
-        let flow_id = flow.flow["id"].as_str().ok_or(DomainError::FlowNotFound)?;
+        let mut payload = match &command {
+            VerificationCommand::ByLink { email, .. } => serde_json::json!({
+                "method": "link",
+                "email": email,
+                "csrf_token": csrf_token,
+            }),
+            VerificationCommand::SendCode { email, .. } => serde_json::json!({
+                "method": "code",
+                "email": email,
+                "csrf_token": csrf_token,
+            }),
+            VerificationCommand::SubmitCode { code, .. } => serde_json::json!({
+                "method": "code",
+                "code": code,
+                "csrf_token": csrf_token,
+            }),
+        };
 
-        let mut payload = serde_json::json!({
-            "method": "link",
-            "email": request.email,
-            "csrf_token": flow.csrf_token,
-        });
+        let transient = match command {
+            VerificationCommand::ByLink {
+                transient_payload, ..
+            } => transient_payload,
+            VerificationCommand::SendCode {
+                transient_payload, ..
+            } => transient_payload,
+            VerificationCommand::SubmitCode {
+                transient_payload, ..
+            } => transient_payload,
+        };
 
-        if let Some(transient) = request.transient_payload {
-            payload["transient_payload"] = transient;
+        if let Some(t) = transient {
+            payload["transient_payload"] = serde_json::to_value(t.0).unwrap_or_default();
         }
 
         post_flow(
             &self.client.client,
             &self.client.public_url,
             "verification",
-            flow_id,
+            &flow_id,
             payload,
-            &flow.cookies,
-        )
-        .await
-        .map_err(map_verification_error)?;
-
-        Ok(())
-    }
-
-    async fn send_verification_code(
-        &self,
-        request: SendCodeRequest,
-        cookie: Option<&str>,
-    ) -> Result<(), DomainError> {
-        let flow = fetch_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "verification",
-            cookie,
-        )
-        .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
-
-        let flow_id = flow.flow["id"].as_str().ok_or(DomainError::FlowNotFound)?;
-
-        let mut payload = serde_json::json!({
-            "method": "code",
-            "email": request.email,
-            "csrf_token": flow.csrf_token,
-        });
-
-        if let Some(transient) = request.transient_payload {
-            payload["transient_payload"] = transient;
-        }
-
-        post_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "verification",
-            flow_id,
-            payload,
-            &flow.cookies,
-        )
-        .await
-        .map_err(map_verification_error)?;
-
-        Ok(())
-    }
-
-    async fn submit_verification_code(
-        &self,
-        request: SubmitCodeRequest,
-        cookie: &str,
-    ) -> Result<(), DomainError> {
-        let flow = fetch_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "verification",
-            Some(cookie),
-        )
-        .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
-
-        let flow_id = flow.flow["id"].as_str().ok_or(DomainError::FlowNotFound)?;
-
-        let mut payload = serde_json::json!({
-            "method": "code",
-            "code": request.code,
-            "csrf_token": flow.csrf_token,
-        });
-
-        if let Some(transient) = request.transient_payload {
-            payload["transient_payload"] = transient;
-        }
-
-        post_flow(
-            &self.client.client,
-            &self.client.public_url,
-            "verification",
-            flow_id,
-            payload,
-            &flow.cookies,
+            &cookies,
         )
         .await
         .map_err(map_verification_error)?;

@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::ports::login::{AuthenticationPort, LoginCredentials};
+use crate::domain::ports::login::{AuthenticationPort, LoginCommand};
 use std::sync::Arc;
 
 pub struct LoginUseCase {
@@ -13,10 +13,10 @@ impl LoginUseCase {
 
     pub async fn execute(
         &self,
-        credentials: LoginCredentials,
+        command: LoginCommand,
         cookie: Option<&str>,
     ) -> Result<String, DomainError> {
         let flow_id = self.auth_port.initiate_login(cookie).await?;
-        self.auth_port.complete_login(&flow_id, credentials).await
+        self.auth_port.complete_login(&flow_id, command).await
     }
 }

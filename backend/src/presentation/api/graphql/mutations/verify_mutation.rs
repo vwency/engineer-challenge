@@ -15,12 +15,10 @@ impl VerificationMutation {
             .data_opt::<Option<String>>()
             .and_then(|opt| opt.as_ref())
             .map(|s| s.as_str());
-
         verification_use_case
-            .execute_link(input.into(), cookie)
+            .execute(input.into(), cookie)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-
         Ok(true)
     }
 
@@ -34,12 +32,10 @@ impl VerificationMutation {
             .data_opt::<Option<String>>()
             .and_then(|opt| opt.as_ref())
             .map(|s| s.as_str());
-
         verification_use_case
-            .execute_code_send(input.into(), cookie)
+            .execute(input.into(), cookie)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-
         Ok(true)
     }
 
@@ -52,15 +48,11 @@ impl VerificationMutation {
         let cookie = ctx
             .data_opt::<Option<String>>()
             .and_then(|opt| opt.as_ref())
-            .ok_or_else(|| {
-                async_graphql::Error::new("Cookie is required to submit verification code")
-            })?;
-
+            .map(|s| s.as_str());
         verification_use_case
-            .execute_code_submit(input.into(), cookie)
+            .execute(input.into(), cookie)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-
         Ok(true)
     }
 }

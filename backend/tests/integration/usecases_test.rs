@@ -2,10 +2,10 @@ use rust_kratos::application::usecases::auth::{
     get_current_user::GetCurrentUserUseCase, login::LoginUseCase, logout::LogoutUseCase,
     recovery::RecoveryUseCase, register::RegisterUseCase, settings::UpdateSettingsUseCase,
 };
-use rust_kratos::domain::ports::login::LoginCredentials;
+use rust_kratos::domain::ports::login::LoginCommand;
 use rust_kratos::domain::ports::recovery::RecoveryRequest;
 use rust_kratos::domain::ports::registration::RegistrationData;
-use rust_kratos::domain::ports::settings::SettingsData;
+use rust_kratos::domain::ports::settings::{SettingsCommand, SettingsData};
 use rust_kratos::infrastructure::adapters::kratos::http::{
     identity::KratosIdentityAdapter, login::KratosAuthenticationAdapter,
     logout::KratosSessionAdapter, recovery::KratosRecoveryAdapter,
@@ -87,14 +87,16 @@ async fn test_login_use_case_returns_session_cookie() {
     let password = "Test1234!@#$";
     register_and_login(&ctx, &email, password).await;
     let use_case = make_login_use_case(&ctx);
-    let credentials = LoginCredentials {
-        identifier: email.clone(),
-        password: password.to_string(),
-        address: None,
-        code: None,
-        resend: None,
-    };
-    let result = use_case.execute(credentials, None).await;
+    let result = use_case
+        .execute(
+            LoginCommand::Password {
+                identifier: email.clone(),
+                password: password.to_string(),
+                address: None,
+            },
+            None,
+        )
+        .await;
     assert!(result.is_ok());
     assert!(!result.unwrap().is_empty());
 }
@@ -103,14 +105,16 @@ async fn test_login_use_case_returns_session_cookie() {
 async fn test_login_use_case_with_invalid_credentials_fails() {
     let ctx = TestContext::new();
     let use_case = make_login_use_case(&ctx);
-    let credentials = LoginCredentials {
-        identifier: "nonexistent@example.com".to_string(),
-        password: "wrongpassword".to_string(),
-        address: None,
-        code: None,
-        resend: None,
-    };
-    let result = use_case.execute(credentials, None).await;
+    let result = use_case
+        .execute(
+            LoginCommand::Password {
+                identifier: "nonexistent@example.com".to_string(),
+                password: "wrongpassword".to_string(),
+                address: None,
+            },
+            None,
+        )
+        .await;
     assert!(result.is_err());
 }
 
@@ -192,13 +196,9 @@ async fn test_update_settings_use_case_without_session_fails() {
     let ctx = TestContext::new();
     let use_case = make_settings_use_case(&ctx);
     let data = SettingsData {
-        method: "password".to_string(),
-        password: Some("NewPass1234!".to_string()),
-        traits: None,
-        lookup_secret_confirm: None,
-        lookup_secret_disable: None,
-        lookup_secret_regenerate: None,
-        lookup_secret_reveal: None,
+        command: SettingsCommand::Password {
+            password: "NewPass1234!".to_string(),
+        },
         transient_payload: None,
     };
     let result = use_case.execute(data, "invalid_cookie").await;
@@ -213,13 +213,9 @@ async fn test_update_settings_use_case_with_valid_session() {
     let cookie = register_and_login(&ctx, &email, password).await;
     let use_case = make_settings_use_case(&ctx);
     let data = SettingsData {
-        method: "password".to_string(),
-        password: Some("NewPass5678!@#$".to_string()),
-        traits: None,
-        lookup_secret_confirm: None,
-        lookup_secret_disable: None,
-        lookup_secret_regenerate: None,
-        lookup_secret_reveal: None,
+        command: SettingsCommand::Password {
+            password: "NewPass5678!@#$".to_string(),
+        },
         transient_payload: None,
     };
     let result = use_case.execute(data, &cookie).await;

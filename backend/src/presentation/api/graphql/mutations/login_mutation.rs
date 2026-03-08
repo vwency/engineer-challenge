@@ -1,7 +1,6 @@
-use crate::domain::ports::login::LoginCredentials;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
-use crate::presentation::api::graphql::inputs::inputs::LoginInput;
+use crate::presentation::api::graphql::inputs::inputs::{LoginCodeInput, LoginPasswordInput};
 use async_graphql::{Context, Object, Result};
 use std::sync::Arc;
 
@@ -10,7 +9,21 @@ pub struct LoginMutation;
 
 #[Object]
 impl LoginMutation {
-    async fn login(&self, ctx: &Context<'_>, input: LoginInput) -> Result<bool> {
+    async fn login_password(&self, ctx: &Context<'_>, input: LoginPasswordInput) -> Result<bool> {
+        self.execute_login(ctx, input.into()).await
+    }
+
+    async fn login_code(&self, ctx: &Context<'_>, input: LoginCodeInput) -> Result<bool> {
+        self.execute_login(ctx, input.into()).await
+    }
+}
+
+impl LoginMutation {
+    async fn execute_login(
+        &self,
+        ctx: &Context<'_>,
+        command: crate::domain::ports::login::LoginCommand,
+    ) -> Result<bool> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
         let cookie = ctx
             .data_opt::<Option<String>>()
@@ -19,7 +32,7 @@ impl LoginMutation {
 
         let session_token = use_cases
             .login
-            .execute(LoginCredentials::from(input), cookie)
+            .execute(command, cookie)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 

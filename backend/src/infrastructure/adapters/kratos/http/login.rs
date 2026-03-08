@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::ports::login::{AuthenticationPort, LoginCredentials};
+use crate::domain::ports::login::{AuthenticationPort, LoginCommand};
 use crate::domain::ports::session::SessionPort;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
@@ -47,7 +47,7 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
     async fn complete_login(
         &self,
         flow_id: &str,
-        credentials: LoginCredentials,
+        command: LoginCommand,
     ) -> Result<String, DomainError> {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "login", None)
             .await
@@ -56,23 +56,35 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         let csrf_token = flow.csrf_token.clone();
         debug!("Using flow_id: {}, csrf_token: {}", flow_id, csrf_token);
 
-        let mut payload = serde_json::json!({
-            "method": "password",
-            "identifier": credentials.identifier,
-            "password": credentials.password,
-            "csrf_token": csrf_token,
-        });
-
-        if let Some(addr) = credentials.address {
-            payload["address"] = serde_json::json!(addr);
-        }
-        if let Some(code) = credentials.code {
-            payload["code"] = serde_json::json!(code);
-            payload["method"] = serde_json::json!("code");
-        }
-        if let Some(resend) = credentials.resend {
-            payload["resend"] = serde_json::json!(resend);
-        }
+        let payload = match command {
+            LoginCommand::Password {
+                identifier,
+                password,
+                address,
+            } => {
+                let mut p = serde_json::json!({
+                    "method": "password",
+                    "identifier": identifier,
+                    "password": password,
+                    "csrf_token": csrf_token,
+                });
+                if let Some(addr) = address {
+                    p["address"] = serde_json::json!(addr);
+                }
+                p
+            }
+            LoginCommand::Code { code, resend } => {
+                let mut p = serde_json::json!({
+                    "method": "code",
+                    "code": code,
+                    "csrf_token": csrf_token,
+                });
+                if let Some(resend) = resend {
+                    p["resend"] = serde_json::json!(resend);
+                }
+                p
+            }
+        };
 
         debug!(
             "Login payload: {}",
