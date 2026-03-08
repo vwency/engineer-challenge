@@ -7,3 +7,7 @@ mod integration {
     mod kratos_session_test;
     mod usecases_test;
 }
+
+mod e2e {
+    mod recovery_test;
+}
