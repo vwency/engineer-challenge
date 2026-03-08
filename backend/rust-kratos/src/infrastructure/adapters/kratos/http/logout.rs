@@ -64,17 +64,19 @@ impl KratosSessionAdapter {
             .header(header::COOKIE, cookie)
             .send()
             .await
-            .map_err(|e| DomainError::Network(e.to_string()))?;
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         match response.status() {
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
                 return Err(DomainError::NotAuthenticated);
             }
             StatusCode::TOO_MANY_REQUESTS => {
-                return Err(DomainError::Network("Rate limit exceeded".to_string()));
+                return Err(DomainError::ServiceUnavailable(
+                    "Rate limit exceeded".into(),
+                ));
             }
             s if !s.is_success() => {
-                return Err(DomainError::Network(format!(
+                return Err(DomainError::ServiceUnavailable(format!(
                     "Failed to get logout flow: {}",
                     s
                 )));
@@ -85,12 +87,12 @@ impl KratosSessionAdapter {
         let data: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| DomainError::Network(e.to_string()))?;
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         data["logout_url"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or_else(|| DomainError::Unknown("Logout URL not found".to_string()))
+            .ok_or_else(|| DomainError::InvalidData("Logout URL not found".into()))
     }
 }
 
@@ -106,14 +108,14 @@ impl SessionPort for KratosSessionAdapter {
             .header(header::COOKIE, cookie)
             .send()
             .await
-            .map_err(|e| DomainError::Network(e.to_string()))?;
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         match response.status() {
             s if s.is_success() || s == StatusCode::FOUND || s == StatusCode::SEE_OTHER => Ok(()),
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => Err(DomainError::NotAuthenticated),
             s => {
                 let error_text = response.text().await.unwrap_or_else(|_| s.to_string());
-                Err(DomainError::Unknown(format!(
+                Err(DomainError::ServiceUnavailable(format!(
                     "Logout failed: {}",
                     error_text
                 )))

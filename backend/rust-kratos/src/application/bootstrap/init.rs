@@ -1,4 +1,4 @@
-use crate::application::boostrap::config::Config;
+use crate::application::bootstrap::config::Config;
 use crate::infrastructure::adapters::graphql::schema::{AppSchema, create_schema};
 use crate::infrastructure::adapters::http::server;
 use crate::infrastructure::di::container::AppContainer;
@@ -12,7 +12,6 @@ use tracing_subscriber::{EnvFilter, reload};
 
 pub async fn run() -> anyhow::Result<()> {
     let (filter, reload_handle) = reload::Layer::new(EnvFilter::new("info"));
-
     tracing_subscriber::registry()
         .with(filter)
         .with(tracing_subscriber::fmt::layer())
@@ -20,13 +19,11 @@ pub async fn run() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to initialize tracing subscriber: {}", e))?;
 
     let config = Config::from_env()?;
-
     reload_handle
         .modify(|f| *f = EnvFilter::new(&config.server.log_level))
         .map_err(|e| anyhow::anyhow!("Failed to reload log level: {}", e))?;
 
     info!("Starting application...");
-
     let container = AppContainer::new(&config)?;
     let schema = Arc::new(create_schema(&container));
 
@@ -43,7 +40,7 @@ async fn start_server(
     config: &Config,
     container: &AppContainer,
 ) -> anyhow::Result<()> {
-    server::start(schema, config.server.clone(), container.kratos.clone())
+    server::start(schema, config.server.clone(), container.kratos_client())
         .await
         .map_err(|e| anyhow::anyhow!("Server error: {}", e))
 }
@@ -51,13 +48,10 @@ async fn start_server(
 async fn shutdown_signal() {
     let mut sigint =
         signal::unix::signal(SignalKind::interrupt()).expect("Failed to install SIGINT handler");
-
     let mut sigterm =
         signal::unix::signal(SignalKind::terminate()).expect("Failed to install SIGTERM handler");
-
     let mut sigquit =
         signal::unix::signal(SignalKind::quit()).expect("Failed to install SIGQUIT handler");
-
     let mut sighup =
         signal::unix::signal(SignalKind::hangup()).expect("Failed to install SIGHUP handler");
 

@@ -29,7 +29,7 @@ impl IdentityPort for KratosIdentityAdapter {
             .header(header::COOKIE, cookie)
             .send()
             .await
-            .map_err(|e| DomainError::Network(e.to_string()))?;
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         if !response.status().is_success() {
             return Err(DomainError::NotAuthenticated);
@@ -38,16 +38,16 @@ impl IdentityPort for KratosIdentityAdapter {
         let session_data: serde_json::Value = response
             .json()
             .await
-            .map_err(|e| DomainError::Network(e.to_string()))?;
+            .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         let email = session_data["identity"]["traits"]["email"]
             .as_str()
-            .ok_or_else(|| DomainError::Unknown("Email not found".to_string()))?
+            .ok_or_else(|| DomainError::InvalidData("Email not found".into()))?
             .to_string();
 
         let username = session_data["identity"]["traits"]["username"]
             .as_str()
-            .ok_or_else(|| DomainError::Unknown("Username not found".to_string()))?
+            .ok_or_else(|| DomainError::InvalidData("Username not found".into()))?
             .to_string();
 
         let geo_location = session_data["identity"]["traits"]["geo_location"]

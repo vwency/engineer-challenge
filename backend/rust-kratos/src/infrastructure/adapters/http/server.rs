@@ -1,4 +1,4 @@
-use crate::application::boostrap::config::ServerConfig;
+use crate::application::bootstrap::config::ServerConfig;
 use crate::infrastructure::adapters::graphql::handlers::{graphql_handler, graphql_playground};
 use crate::infrastructure::adapters::graphql::schema::AppSchema;
 use crate::infrastructure::adapters::kratos::client::KratosClient;

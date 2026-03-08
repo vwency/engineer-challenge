@@ -4,6 +4,7 @@ use crate::domain::ports::verification::{
 };
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
+use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -18,20 +19,18 @@ impl KratosVerificationAdapter {
     }
 }
 
-fn map_verification_error(
-    e: crate::infrastructure::adapters::kratos::models::errors::KratosFlowError,
-) -> DomainError {
+fn map_verification_error(e: KratosFlowError) -> DomainError {
     match (e.status, e.message_id()) {
         (StatusCode::BAD_REQUEST, 4070006) => {
-            DomainError::InvalidData("Invalid verification code".to_string())
+            DomainError::InvalidData("Invalid verification code".into())
         }
         (StatusCode::BAD_REQUEST, 4070001) => {
-            DomainError::InvalidData("Invalid email address".to_string())
+            DomainError::InvalidData("Invalid email address".into())
         }
-        (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().to_string()),
-        (StatusCode::GONE, _) => DomainError::FlowNotFound,
+        (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
+        (StatusCode::GONE, _) => DomainError::NotFound("verification flow".into()),
         (StatusCode::UNAUTHORIZED, _) => DomainError::NotAuthenticated,
-        _ => DomainError::Network(e.to_string()),
+        _ => DomainError::ServiceUnavailable(e.to_string()),
     }
 }
 
@@ -49,9 +48,11 @@ impl VerificationPort for KratosVerificationAdapter {
             cookie,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        let flow_id = flow.flow["id"].as_str().ok_or(DomainError::FlowNotFound)?;
+        let flow_id = flow.flow["id"]
+            .as_str()
+            .ok_or(DomainError::NotFound("verification flow".into()))?;
 
         let mut payload = serde_json::json!({
             "method": "link",
@@ -89,9 +90,11 @@ impl VerificationPort for KratosVerificationAdapter {
             cookie,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        let flow_id = flow.flow["id"].as_str().ok_or(DomainError::FlowNotFound)?;
+        let flow_id = flow.flow["id"]
+            .as_str()
+            .ok_or(DomainError::NotFound("verification flow".into()))?;
 
         let mut payload = serde_json::json!({
             "method": "code",
@@ -129,9 +132,11 @@ impl VerificationPort for KratosVerificationAdapter {
             Some(cookie),
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        let flow_id = flow.flow["id"].as_str().ok_or(DomainError::FlowNotFound)?;
+        let flow_id = flow.flow["id"]
+            .as_str()
+            .ok_or(DomainError::NotFound("verification flow".into()))?;
 
         let mut payload = serde_json::json!({
             "method": "code",

@@ -1,4 +1,4 @@
-use crate::application::boostrap::config::Config;
+use crate::application::bootstrap::config::Config;
 use crate::application::usecases::auth::{
     get_current_user::GetCurrentUserUseCase, login::LoginUseCase, logout::LogoutUseCase,
     recovery::RecoveryUseCase, register::RegisterUseCase, settings::UpdateSettingsUseCase,
@@ -35,7 +35,7 @@ impl UseCases {
 #[derive(Clone)]
 pub struct AppContainer {
     pub use_cases: Arc<UseCases>,
-    pub kratos: Arc<KratosClient>,
+    kratos: Arc<KratosClient>,
 }
 
 impl AppContainer {
@@ -45,6 +45,14 @@ impl AppContainer {
         let factory = KratosAdapterFactory::from_client(kratos.clone());
         let use_cases = Arc::new(UseCases::new(&factory));
         Ok(Self { use_cases, kratos })
+    }
+
+    pub fn use_cases(&self) -> Arc<UseCases> {
+        self.use_cases.clone()
+    }
+
+    pub fn kratos_client(&self) -> Arc<KratosClient> {
+        self.kratos.clone()
     }
 
     fn validate_config(config: &Config) -> Result<(), ContainerError> {

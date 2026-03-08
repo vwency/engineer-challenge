@@ -1,2 +1,2 @@
-pub mod boostrap;
+pub mod bootstrap;
 pub mod usecases;

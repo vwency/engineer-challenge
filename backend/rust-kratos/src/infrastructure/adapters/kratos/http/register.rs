@@ -26,12 +26,12 @@ impl RegistrationPort for KratosRegistrationAdapter {
             cookie,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         flow.flow["id"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or(DomainError::FlowNotFound)
+            .ok_or(DomainError::NotFound("registration flow".into()))
     }
 
     async fn complete_registration(
@@ -46,7 +46,7 @@ impl RegistrationPort for KratosRegistrationAdapter {
             None,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         let payload = serde_json::json!({
             "method": "password",
@@ -67,29 +67,21 @@ impl RegistrationPort for KratosRegistrationAdapter {
             &flow.cookies,
         )
         .await
-        .map_err(|e| {
-            let id = e.body["ui"]["messages"][0]["id"].as_u64().unwrap_or(0);
-            match (e.status, id) {
-                (StatusCode::BAD_REQUEST, 4000007) => {
-                    DomainError::Conflict("Email already exists".to_string())
-                }
-                (StatusCode::BAD_REQUEST, 4000010) => {
-                    DomainError::InvalidData("Password is too weak".to_string())
-                }
-                (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(
-                    e.body["ui"]["messages"][0]["text"]
-                        .as_str()
-                        .unwrap_or("Invalid registration data")
-                        .to_string(),
-                ),
-                (StatusCode::GONE, _) => DomainError::FlowNotFound,
-                _ => DomainError::Network(e.to_string()),
+        .map_err(|e| match (e.status, e.message_id()) {
+            (StatusCode::BAD_REQUEST, 4000007) => {
+                DomainError::Conflict("Email already exists".into())
             }
+            (StatusCode::BAD_REQUEST, 4000010) => {
+                DomainError::InvalidData("Password is too weak".into())
+            }
+            (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
+            (StatusCode::GONE, _) => DomainError::NotFound("registration flow".into()),
+            _ => DomainError::ServiceUnavailable(e.to_string()),
         })?;
 
         if result.data.get("session").is_none() && result.data.get("identity").is_none() {
-            return Err(DomainError::Unknown(
-                "Neither session nor identity found in response".to_string(),
+            return Err(DomainError::ServiceUnavailable(
+                "Neither session nor identity found in response".into(),
             ));
         }
 
@@ -97,6 +89,6 @@ impl RegistrationPort for KratosRegistrationAdapter {
             .cookies
             .into_iter()
             .find(|c| c.contains("ory_kratos_session"))
-            .ok_or_else(|| DomainError::Unknown("No session cookie was created".to_string()))
+            .ok_or_else(|| DomainError::ServiceUnavailable("No session cookie was created".into()))
     }
 }

@@ -1,6 +1,6 @@
-use rust_kratos::application::boostrap;
+use rust_kratos::application::bootstrap;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    boostrap::run().await
+    bootstrap::run().await
 }

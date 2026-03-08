@@ -31,9 +31,11 @@ impl RecoveryPort for KratosRecoveryAdapter {
             cookie,
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        let flow_id = flow.flow["id"].as_str().ok_or(DomainError::FlowNotFound)?;
+        let flow_id = flow.flow["id"]
+            .as_str()
+            .ok_or(DomainError::NotFound("recovery flow".into()))?;
 
         let payload = serde_json::json!({
             "method": "link",
@@ -52,12 +54,12 @@ impl RecoveryPort for KratosRecoveryAdapter {
         .await
         .map_err(|e| match (e.status, e.message_id()) {
             (StatusCode::BAD_REQUEST, 4060001) => {
-                DomainError::InvalidData("Invalid email address".to_string())
+                DomainError::InvalidData("Invalid email address".into())
             }
-            (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().to_string()),
-            (StatusCode::GONE, _) => DomainError::FlowNotFound,
+            (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
+            (StatusCode::GONE, _) => DomainError::NotFound("recovery flow".into()),
             (StatusCode::UNAUTHORIZED, _) => DomainError::NotAuthenticated,
-            _ => DomainError::Network(e.to_string()),
+            _ => DomainError::ServiceUnavailable(e.to_string()),
         })?;
 
         if result.cookies.is_empty() {

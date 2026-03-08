@@ -23,6 +23,23 @@ impl KratosFlowError {
             .as_str()
             .unwrap_or("Unknown error")
     }
+
+    pub fn node_message_text(&self, field: &str) -> Option<&str> {
+        self.body["ui"]["nodes"]
+            .as_array()?
+            .iter()
+            .find(|n| n["attributes"]["name"].as_str() == Some(field))?["messages"][0]["text"]
+            .as_str()
+    }
+
+    pub fn is_browser_location_change_required(&self) -> bool {
+        self.status == StatusCode::UNPROCESSABLE_ENTITY
+            && self.body["error"]["id"].as_str() == Some("browser_location_change_required")
+    }
+
+    pub fn redirect_browser_to(&self) -> Option<&str> {
+        self.body["redirect_browser_to"].as_str()
+    }
 }
 
 impl std::fmt::Display for KratosFlowError {

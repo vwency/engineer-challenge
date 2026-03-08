@@ -27,12 +27,12 @@ impl SettingsPort for KratosSettingsAdapter {
             Some(cookie),
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         flow.flow["id"]
             .as_str()
             .map(|s| s.to_string())
-            .ok_or(DomainError::FlowNotFound)
+            .ok_or(DomainError::NotFound("settings flow".into()))
     }
 
     async fn update_settings(
@@ -48,7 +48,7 @@ impl SettingsPort for KratosSettingsAdapter {
             Some(cookie),
         )
         .await
-        .map_err(|e| DomainError::Network(e.to_string()))?;
+        .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
         let csrf_token = flow.csrf_token.clone();
         debug!("Using flow_id: {}, csrf_token: {}", flow_id, csrf_token);
@@ -97,12 +97,12 @@ impl SettingsPort for KratosSettingsAdapter {
         .map_err(|e| match (e.status, e.message_id()) {
             (StatusCode::FORBIDDEN, _) => DomainError::PrivilegedSessionRequired,
             (StatusCode::UNAUTHORIZED, _) => DomainError::NotAuthenticated,
-            (StatusCode::GONE, _) => DomainError::FlowNotFound,
+            (StatusCode::GONE, _) => DomainError::NotFound("settings flow".into()),
             (StatusCode::BAD_REQUEST, 4000010) => {
-                DomainError::InvalidData("Password is too weak".to_string())
+                DomainError::InvalidData("Password is too weak".into())
             }
-            (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().to_string()),
-            _ => DomainError::Network(e.to_string()),
+            (StatusCode::BAD_REQUEST, _) => DomainError::InvalidData(e.message_text().into()),
+            _ => DomainError::ServiceUnavailable(e.to_string()),
         })?;
 
         debug!("Settings response: {:?}", result.data);
@@ -113,7 +113,7 @@ impl SettingsPort for KratosSettingsAdapter {
             .get("state")
             .and_then(|s| s.as_str())
             .map(|s| s.to_string())
-            .ok_or_else(|| DomainError::Unknown("No state in response".to_string()))?;
+            .ok_or_else(|| DomainError::ServiceUnavailable("No state in response".into()))?;
 
         Ok((state, result.cookies))
     }
