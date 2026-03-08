@@ -1,7 +1,7 @@
 use crate::application::boostrap::config::Config;
+use crate::infrastructure::adapters::graphql::schema::{AppSchema, create_schema};
 use crate::infrastructure::adapters::http::server;
 use crate::infrastructure::di::container::AppContainer;
-use crate::presentation::api::graphql::schema::{AppSchema, create_schema};
 use std::sync::Arc;
 use tokio::signal;
 use tokio::signal::unix::SignalKind;

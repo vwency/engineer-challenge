@@ -1,5 +1,5 @@
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
-use crate::presentation::api::graphql::schema::AppSchema;
+use crate::infrastructure::adapters::graphql::schema::AppSchema;
 use actix_web::{HttpRequest, HttpResponse, Result, web};
 use async_graphql::http::GraphiQLSource;
 use async_graphql_actix_web::GraphQLRequest;

@@ -1,7 +1,7 @@
 use crate::application::boostrap::config::ServerConfig;
 use crate::infrastructure::adapters::graphql::handlers::{graphql_handler, graphql_playground};
+use crate::infrastructure::adapters::graphql::schema::AppSchema;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
-use crate::presentation::api::graphql::schema::AppSchema;
 use crate::presentation::api::rest::health_check;
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, http, web};

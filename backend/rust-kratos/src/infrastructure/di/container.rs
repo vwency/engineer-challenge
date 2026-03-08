@@ -19,7 +19,7 @@ pub struct UseCases {
 }
 
 impl UseCases {
-    fn new(factory: &dyn AdapterFactory) -> Self {
+    pub fn new(factory: &dyn AdapterFactory) -> Self {
         Self {
             register: RegisterUseCase::new(factory.create_registration_adapter()),
             login: LoginUseCase::new(factory.create_authentication_adapter()),
@@ -41,11 +41,9 @@ pub struct AppContainer {
 impl AppContainer {
     pub fn new(config: &Config) -> Result<Self, ContainerError> {
         Self::validate_config(config)?;
-
         let kratos = Arc::new(KratosClient::new(&config.kratos));
         let factory = KratosAdapterFactory::from_client(kratos.clone());
         let use_cases = Arc::new(UseCases::new(&factory));
-
         Ok(Self { use_cases, kratos })
     }
 
