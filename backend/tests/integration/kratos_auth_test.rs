@@ -1,4 +1,4 @@
-use rust_kratos::domain::ports::auth::{AuthenticationPort, LoginCredentials};
+use rust_kratos::domain::ports::login::{AuthenticationPort, LoginCredentials};
 use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
 
 #[path = "../common/mod.rs"]

@@ -2,7 +2,7 @@ use rust_kratos::application::usecases::auth::{
     get_current_user::GetCurrentUserUseCase, login::LoginUseCase, logout::LogoutUseCase,
     recovery::RecoveryUseCase, register::RegisterUseCase, settings::UpdateSettingsUseCase,
 };
-use rust_kratos::domain::ports::auth::LoginCredentials;
+use rust_kratos::domain::ports::login::LoginCredentials;
 use rust_kratos::domain::ports::recovery::RecoveryRequest;
 use rust_kratos::domain::ports::registration::RegistrationData;
 use rust_kratos::domain::ports::settings::SettingsData;

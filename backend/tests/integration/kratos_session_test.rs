@@ -59,7 +59,7 @@ async fn test_session_inactive_after_logout() {
 }
 
 async fn register_and_login(ctx: &TestContext) -> String {
-    use rust_kratos::domain::ports::auth::{AuthenticationPort, LoginCredentials};
+    use rust_kratos::domain::ports::login::{AuthenticationPort, LoginCredentials};
     use rust_kratos::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
     use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
 

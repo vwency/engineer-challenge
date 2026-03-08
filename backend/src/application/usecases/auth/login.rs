@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::ports::auth::{AuthenticationPort, LoginCredentials};
+use crate::domain::ports::login::{AuthenticationPort, LoginCredentials};
 use std::sync::Arc;
 
 pub struct LoginUseCase {

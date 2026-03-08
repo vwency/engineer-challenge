@@ -1,6 +1,6 @@
 use crate::application::bootstrap::config::KratosConfig;
 use crate::domain::ports::{
-    auth::AuthenticationPort, identity::IdentityPort, recovery::RecoveryPort,
+    identity::IdentityPort, login::AuthenticationPort, recovery::RecoveryPort,
     registration::RegistrationPort, session::SessionPort, settings::SettingsPort,
     verification::VerificationPort,
 };

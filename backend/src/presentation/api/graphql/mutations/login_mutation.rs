@@ -1,4 +1,4 @@
-use crate::domain::ports::auth::LoginCredentials;
+use crate::domain::ports::login::LoginCredentials;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::inputs::LoginInput;

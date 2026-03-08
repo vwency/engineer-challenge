@@ -2,7 +2,7 @@ use async_graphql::InputObject;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::domain::ports::auth::LoginCredentials;
+use crate::domain::ports::login::LoginCredentials;
 use crate::domain::ports::recovery::RecoveryRequest;
 use crate::domain::ports::registration::RegistrationData;
 use crate::domain::ports::settings::SettingsData;

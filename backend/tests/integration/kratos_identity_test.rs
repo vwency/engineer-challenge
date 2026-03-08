@@ -55,7 +55,7 @@ async fn register_and_login(
     username: &str,
     password: &str,
 ) -> String {
-    use rust_kratos::domain::ports::auth::{AuthenticationPort, LoginCredentials};
+    use rust_kratos::domain::ports::login::{AuthenticationPort, LoginCredentials};
     use rust_kratos::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
     use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
 

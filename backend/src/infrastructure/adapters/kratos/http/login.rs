@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::ports::auth::{AuthenticationPort, LoginCredentials};
+use crate::domain::ports::login::{AuthenticationPort, LoginCredentials};
 use crate::domain::ports::session::SessionPort;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
