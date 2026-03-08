@@ -38,3 +38,9 @@ Ory экосистема
 1. После login, registeration нет редиректов на homepage.
 2. Нету rate-limiting.
 3. Hardcode
+
+### Continue
+
+1. GitOps чтение новых helm релизов, из применение.
+2. Локальный раннер github actions.
+3. Coverage тесты в ci, codecov, SonarQube
