@@ -1,4 +1,4 @@
-name: Build Docker Images (backend)
+name: Push Helm to OCI
 
 on:
   workflow_dispatch:
@@ -46,4 +46,3 @@ jobs:
       dry_run: false
     secrets:
       personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-      
