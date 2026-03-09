@@ -25,8 +25,7 @@ jobs:
     secrets:
       personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-  trigger-cleanup:
-    needs: [trigger-build]
+  trigger-cleanup-backend:
     uses: vwency/workflow/.github/workflows/clean-registry.yaml@main
     with:
       owner: ${{ github.repository_owner }}
@@ -37,8 +36,7 @@ jobs:
     secrets:
       personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-  trigger-cleanup:
-    needs: [trigger-build]
+  trigger-cleanup-frontend:
     uses: vwency/workflow/.github/workflows/clean-registry.yaml@main
     with:
       owner: ${{ github.repository_owner }}
@@ -48,3 +46,4 @@ jobs:
       dry_run: false
     secrets:
       personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      
