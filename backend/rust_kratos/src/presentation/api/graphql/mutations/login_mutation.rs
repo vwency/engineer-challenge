@@ -1,3 +1,5 @@
+use crate::application::commands::CommandHandler;
+use crate::application::commands::login::LoginCommand;
 use crate::domain::ports::login::LoginCredentials;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
@@ -12,21 +14,27 @@ pub struct LoginMutation;
 impl LoginMutation {
     async fn login(&self, ctx: &Context<'_>, input: LoginInput) -> Result<bool> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
-        let cookie = ctx
-            .data_opt::<Option<String>>()
-            .and_then(|opt| opt.as_ref())
-            .map(|s| s.as_str());
+
+        let command = LoginCommand {
+            credentials: LoginCredentials::from(input),
+            cookie: extract_cookie(ctx),
+        };
 
         let session_token = use_cases
+            .commands
             .login
-            .execute(LoginCredentials::from(input), cookie)
+            .handle(command)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 
-        if let Some(response_cookies) = ctx.data_opt::<ResponseCookies>() {
-            response_cookies.add_cookie(session_token).await;
+        if let Some(cookies) = ctx.data_opt::<ResponseCookies>() {
+            cookies.add_cookie(session_token).await;
         }
 
         Ok(true)
     }
+}
+
+fn extract_cookie(ctx: &Context<'_>) -> Option<String> {
+    ctx.data_opt::<Option<String>>().and_then(|opt| opt.clone())
 }

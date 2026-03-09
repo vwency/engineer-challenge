@@ -1,7 +1,17 @@
-use rust_kratos::application::usecases::auth::{
-    get_current_user::GetCurrentUserUseCase, login::LoginUseCase, logout::LogoutUseCase,
-    recovery::RecoveryUseCase, register::RegisterUseCase, settings::UpdateSettingsUseCase,
-};
+use rust_kratos::application::commands::CommandHandler;
+use rust_kratos::application::commands::login::LoginCommand;
+use rust_kratos::application::commands::login::LoginCommandHandler;
+use rust_kratos::application::commands::logout::LogoutCommand;
+use rust_kratos::application::commands::logout::LogoutCommandHandler;
+use rust_kratos::application::commands::recovery::RecoveryCommand;
+use rust_kratos::application::commands::recovery::RecoveryCommandHandler;
+use rust_kratos::application::commands::register::RegisterCommand;
+use rust_kratos::application::commands::register::RegisterCommandHandler;
+use rust_kratos::application::commands::settings::UpdateSettingsCommand;
+use rust_kratos::application::commands::settings::UpdateSettingsCommandHandler;
+use rust_kratos::application::queries::QueryHandler;
+use rust_kratos::application::queries::get_current_user::GetCurrentUserQuery;
+use rust_kratos::application::queries::get_current_user::GetCurrentUserQueryHandler;
 use rust_kratos::domain::ports::login::LoginCredentials;
 use rust_kratos::domain::ports::recovery::RecoveryRequest;
 use rust_kratos::domain::ports::registration::RegistrationData;
@@ -16,128 +26,148 @@ use rust_kratos::infrastructure::adapters::kratos::http::{
 mod common;
 use common::TestContext;
 
-fn make_register_use_case(ctx: &TestContext) -> RegisterUseCase {
-    RegisterUseCase::new(std::sync::Arc::new(KratosRegistrationAdapter::new(
+fn make_register_handler(ctx: &TestContext) -> RegisterCommandHandler {
+    RegisterCommandHandler::new(std::sync::Arc::new(KratosRegistrationAdapter::new(
         ctx.client.clone(),
     )))
 }
 
-fn make_login_use_case(ctx: &TestContext) -> LoginUseCase {
-    LoginUseCase::new(std::sync::Arc::new(KratosAuthenticationAdapter::new(
+fn make_login_handler(ctx: &TestContext) -> LoginCommandHandler {
+    LoginCommandHandler::new(std::sync::Arc::new(KratosAuthenticationAdapter::new(
         ctx.client.clone(),
     )))
 }
 
-fn make_logout_use_case(ctx: &TestContext) -> LogoutUseCase {
-    LogoutUseCase::new(std::sync::Arc::new(KratosSessionAdapter::new(
+fn make_logout_handler(ctx: &TestContext) -> LogoutCommandHandler {
+    LogoutCommandHandler::new(std::sync::Arc::new(KratosSessionAdapter::new(
         ctx.client.clone(),
     )))
 }
 
-fn make_get_current_user_use_case(ctx: &TestContext) -> GetCurrentUserUseCase {
-    GetCurrentUserUseCase::new(std::sync::Arc::new(KratosIdentityAdapter::new(
+fn make_get_current_user_handler(ctx: &TestContext) -> GetCurrentUserQueryHandler {
+    GetCurrentUserQueryHandler::new(std::sync::Arc::new(KratosIdentityAdapter::new(
         ctx.client.clone(),
     )))
 }
 
-fn make_recovery_use_case(ctx: &TestContext) -> RecoveryUseCase {
-    RecoveryUseCase::new(std::sync::Arc::new(KratosRecoveryAdapter::new(
+fn make_recovery_handler(ctx: &TestContext) -> RecoveryCommandHandler {
+    RecoveryCommandHandler::new(std::sync::Arc::new(KratosRecoveryAdapter::new(
         ctx.client.clone(),
     )))
 }
 
-fn make_settings_use_case(ctx: &TestContext) -> UpdateSettingsUseCase {
-    UpdateSettingsUseCase::new(std::sync::Arc::new(KratosSettingsAdapter::new(
+fn make_settings_handler(ctx: &TestContext) -> UpdateSettingsCommandHandler {
+    UpdateSettingsCommandHandler::new(std::sync::Arc::new(KratosSettingsAdapter::new(
         ctx.client.clone(),
     )))
 }
 
 async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> String {
-    let register = make_register_use_case(ctx);
-    let data = RegistrationData {
-        email: email.to_string(),
-        password: password.to_string(),
-        username: format!("user_{}", uuid::Uuid::new_v4()),
-        geo_location: None,
-    };
-    register.execute(data).await.unwrap().session_cookie
+    let handler = make_register_handler(ctx);
+    let result = handler
+        .handle(RegisterCommand {
+            data: RegistrationData {
+                email: email.to_string(),
+                password: password.to_string(),
+                username: format!("user_{}", uuid::Uuid::new_v4()),
+                geo_location: None,
+            },
+        })
+        .await
+        .unwrap();
+    result.session_cookie
 }
 
 #[tokio::test]
-async fn test_register_use_case_returns_session_cookie() {
+async fn test_register_command_returns_session_cookie() {
     let ctx = TestContext::new();
-    let use_case = make_register_use_case(&ctx);
-    let data = RegistrationData {
-        email: TestContext::random_email(),
-        password: "Test1234!@#$".to_string(),
-        username: format!("user_{}", uuid::Uuid::new_v4()),
-        geo_location: None,
-    };
-    let result = use_case.execute(data).await;
+    let handler = make_register_handler(&ctx);
+    let result = handler
+        .handle(RegisterCommand {
+            data: RegistrationData {
+                email: TestContext::random_email(),
+                password: "Test1234!@#$".to_string(),
+                username: format!("user_{}", uuid::Uuid::new_v4()),
+                geo_location: None,
+            },
+        })
+        .await;
     assert!(result.is_ok());
-    let register_result = result.unwrap();
-    assert!(!register_result.session_cookie.is_empty());
-    assert!(!register_result.flow_id.is_empty());
+    let r = result.unwrap();
+    assert!(!r.session_cookie.is_empty());
+    assert!(!r.flow_id.is_empty());
 }
 
 #[tokio::test]
-async fn test_login_use_case_returns_session_cookie() {
+async fn test_login_command_returns_session_cookie() {
     let ctx = TestContext::new();
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     register_and_login(&ctx, &email, password).await;
-    let use_case = make_login_use_case(&ctx);
-    let credentials = LoginCredentials {
-        identifier: email.clone(),
-        password: password.to_string(),
-        address: None,
-        code: None,
-        resend: None,
-    };
-    let result = use_case.execute(credentials, None).await;
+    let handler = make_login_handler(&ctx);
+    let result = handler
+        .handle(LoginCommand {
+            credentials: LoginCredentials {
+                identifier: email.clone(),
+                password: password.to_string(),
+                address: None,
+                code: None,
+                resend: None,
+            },
+            cookie: None,
+        })
+        .await;
     assert!(result.is_ok());
     assert!(!result.unwrap().is_empty());
 }
 
 #[tokio::test]
-async fn test_login_use_case_with_invalid_credentials_fails() {
+async fn test_login_command_with_invalid_credentials_fails() {
     let ctx = TestContext::new();
-    let use_case = make_login_use_case(&ctx);
-    let credentials = LoginCredentials {
-        identifier: "nonexistent@example.com".to_string(),
-        password: "wrongpassword".to_string(),
-        address: None,
-        code: None,
-        resend: None,
-    };
-    let result = use_case.execute(credentials, None).await;
+    let handler = make_login_handler(&ctx);
+    let result = handler
+        .handle(LoginCommand {
+            credentials: LoginCredentials {
+                identifier: "nonexistent@example.com".to_string(),
+                password: "wrongpassword".to_string(),
+                address: None,
+                code: None,
+                resend: None,
+            },
+            cookie: None,
+        })
+        .await;
     assert!(result.is_err());
 }
 
 #[tokio::test]
-async fn test_logout_use_case_without_cookie_fails() {
+async fn test_logout_command_without_cookie_fails() {
     let ctx = TestContext::new();
-    let use_case = make_logout_use_case(&ctx);
-    let result = use_case.execute(None).await;
+    let handler = make_logout_handler(&ctx);
+    let result = handler.handle(LogoutCommand { cookie: None }).await;
     assert!(result.is_err());
 }
 
 #[tokio::test]
-async fn test_logout_use_case_with_valid_session() {
+async fn test_logout_command_with_valid_session() {
     let ctx = TestContext::new();
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     let cookie = register_and_login(&ctx, &email, password).await;
-    let use_case = make_logout_use_case(&ctx);
-    let result = use_case.execute(Some(&cookie)).await;
+    let handler = make_logout_handler(&ctx);
+    let result = handler
+        .handle(LogoutCommand {
+            cookie: Some(cookie),
+        })
+        .await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
 async fn test_get_current_user_without_cookie_fails() {
     let ctx = TestContext::new();
-    let use_case = make_get_current_user_use_case(&ctx);
-    let result = use_case.execute(None).await;
+    let handler = make_get_current_user_handler(&ctx);
+    let result = handler.handle(GetCurrentUserQuery { cookie: None }).await;
     assert!(result.is_err());
 }
 
@@ -147,81 +177,90 @@ async fn test_get_current_user_with_valid_session() {
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     let cookie = register_and_login(&ctx, &email, password).await;
-    let use_case = make_get_current_user_use_case(&ctx);
-    let result = use_case.execute(Some(&cookie)).await;
+    let handler = make_get_current_user_handler(&ctx);
+    let result = handler
+        .handle(GetCurrentUserQuery {
+            cookie: Some(cookie),
+        })
+        .await;
     assert!(result.is_ok());
-    let user = result.unwrap();
-    assert_eq!(user.email, email);
+    assert_eq!(result.unwrap().email, email);
 }
 
 #[tokio::test]
-async fn test_recovery_use_case_with_valid_email() {
+async fn test_recovery_command_with_valid_email() {
     let ctx = TestContext::new();
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     register_and_login(&ctx, &email, password).await;
-    let use_case = make_recovery_use_case(&ctx);
-    let result = use_case
-        .execute(
-            RecoveryRequest {
-                email: email.clone(),
-            },
-            None,
-        )
+    let handler = make_recovery_handler(&ctx);
+    let result = handler
+        .handle(RecoveryCommand {
+            request: RecoveryRequest { email },
+            cookie: None,
+        })
         .await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
-async fn test_recovery_use_case_with_unknown_email() {
+async fn test_recovery_command_with_unknown_email() {
     let ctx = TestContext::new();
-    let use_case = make_recovery_use_case(&ctx);
-    let result = use_case
-        .execute(
-            RecoveryRequest {
+    let handler = make_recovery_handler(&ctx);
+    let result = handler
+        .handle(RecoveryCommand {
+            request: RecoveryRequest {
                 email: "ghost@example.com".to_string(),
             },
-            None,
-        )
+            cookie: None,
+        })
         .await;
     assert!(result.is_ok());
 }
 
 #[tokio::test]
-async fn test_update_settings_use_case_without_session_fails() {
+async fn test_update_settings_command_without_session_fails() {
     let ctx = TestContext::new();
-    let use_case = make_settings_use_case(&ctx);
-    let data = SettingsData {
-        method: "password".to_string(),
-        password: Some("NewPass1234!".to_string()),
-        traits: None,
-        lookup_secret_confirm: None,
-        lookup_secret_disable: None,
-        lookup_secret_regenerate: None,
-        lookup_secret_reveal: None,
-        transient_payload: None,
-    };
-    let result = use_case.execute(data, "invalid_cookie").await;
+    let handler = make_settings_handler(&ctx);
+    let result = handler
+        .handle(UpdateSettingsCommand {
+            data: SettingsData {
+                method: "password".to_string(),
+                password: Some("NewPass1234!".to_string()),
+                traits: None,
+                lookup_secret_confirm: None,
+                lookup_secret_disable: None,
+                lookup_secret_regenerate: None,
+                lookup_secret_reveal: None,
+                transient_payload: None,
+            },
+            cookie: "invalid_cookie".to_string(),
+        })
+        .await;
     assert!(result.is_err());
 }
 
 #[tokio::test]
-async fn test_update_settings_use_case_with_valid_session() {
+async fn test_update_settings_command_with_valid_session() {
     let ctx = TestContext::new();
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     let cookie = register_and_login(&ctx, &email, password).await;
-    let use_case = make_settings_use_case(&ctx);
-    let data = SettingsData {
-        method: "password".to_string(),
-        password: Some("NewPass5678!@#$".to_string()),
-        traits: None,
-        lookup_secret_confirm: None,
-        lookup_secret_disable: None,
-        lookup_secret_regenerate: None,
-        lookup_secret_reveal: None,
-        transient_payload: None,
-    };
-    let result = use_case.execute(data, &cookie).await;
+    let handler = make_settings_handler(&ctx);
+    let result = handler
+        .handle(UpdateSettingsCommand {
+            data: SettingsData {
+                method: "password".to_string(),
+                password: Some("NewPass5678!@#$".to_string()),
+                traits: None,
+                lookup_secret_confirm: None,
+                lookup_secret_disable: None,
+                lookup_secret_regenerate: None,
+                lookup_secret_reveal: None,
+                transient_payload: None,
+            },
+            cookie,
+        })
+        .await;
     assert!(result.is_err());
 }

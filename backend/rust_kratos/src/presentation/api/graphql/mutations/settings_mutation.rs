@@ -1,3 +1,5 @@
+use crate::application::commands::CommandHandler;
+use crate::application::commands::settings::{UpdateSettingsCommand, UpdateSettingsResult};
 use crate::domain::ports::settings::SettingsData;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
@@ -16,24 +18,29 @@ impl SettingsMutation {
         input: UpdateSettingsInput,
     ) -> Result<String> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
-        let cookie = ctx
-            .data_opt::<Option<String>>()
-            .and_then(|opt| opt.as_ref())
-            .map(|s| s.as_str())
-            .unwrap_or_default();
 
-        let (state, cookies) = use_cases
+        let command = UpdateSettingsCommand {
+            data: SettingsData::from(input),
+            cookie: extract_cookie(ctx).unwrap_or_default(),
+        };
+
+        let UpdateSettingsResult { flow_id, messages } = use_cases
+            .commands
             .update_settings
-            .execute(SettingsData::from(input), cookie)
+            .handle(command)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 
         if let Some(response_cookies) = ctx.data_opt::<ResponseCookies>() {
-            for cookie_str in cookies {
-                response_cookies.add_cookie(cookie_str).await;
+            for message in messages {
+                response_cookies.add_cookie(message).await;
             }
         }
 
-        Ok(state)
+        Ok(flow_id)
     }
+}
+
+fn extract_cookie(ctx: &Context<'_>) -> Option<String> {
+    ctx.data_opt::<Option<String>>().and_then(|opt| opt.clone())
 }
