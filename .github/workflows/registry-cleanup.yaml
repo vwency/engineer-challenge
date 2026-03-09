@@ -26,3 +26,25 @@ jobs:
       dry_run: false
     secrets:
       personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  trigger-cleanup-backend-chart:
+    uses: vwency/workflow/.github/workflows/clean-registry.yaml@main
+    with:
+      owner: ${{ github.repository_owner }}
+      repository: engineer-challenge
+      package: helm/rust-kratos-chart
+      keep_n_tagged: 2
+      dry_run: false
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  trigger-cleanup-frontend-chart:
+    uses: vwency/workflow/.github/workflows/clean-registry.yaml@main
+    with:
+      owner: ${{ github.repository_owner }}
+      repository: engineer-challenge
+      package: helm/frontend-entrypoint-chart
+      keep_n_tagged: 2
+      dry_run: false
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}

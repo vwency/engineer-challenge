@@ -31,7 +31,7 @@ jobs:
     with:
       owner: ${{ github.repository_owner }}
       repository: engineer-challenge
-      package: engineer-challenge/helm/rust-kratos-chart
+      package: helm/rust-kratos-chart
       keep_n_tagged: 2
       dry_run: false
     secrets:
@@ -43,7 +43,7 @@ jobs:
     with:
       owner: ${{ github.repository_owner }}
       repository: engineer-challenge
-      package: engineer-challenge/helm/frontend-entrypoint-chart
+      package: helm/frontend-entrypoint-chart
       keep_n_tagged: 2
       dry_run: false
     secrets:
