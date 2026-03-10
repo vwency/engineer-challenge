@@ -1,5 +1,7 @@
 use crate::application::commands::CommandHandler;
-use crate::application::commands::settings::{UpdateSettingsCommand, UpdateSettingsResult};
+use crate::application::commands::account::settings::{
+    UpdateSettingsCommand, UpdateSettingsResult,
+};
 use crate::domain::ports::settings::SettingsData;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;

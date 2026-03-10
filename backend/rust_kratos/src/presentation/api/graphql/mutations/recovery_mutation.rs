@@ -1,5 +1,5 @@
 use crate::application::commands::CommandHandler;
-use crate::application::commands::recovery::RecoveryCommand;
+use crate::application::commands::account::recovery::RecoveryCommand;
 use crate::domain::ports::recovery::RecoveryRequest;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::RecoveryInput;

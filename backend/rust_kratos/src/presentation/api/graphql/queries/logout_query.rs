@@ -1,5 +1,5 @@
 use crate::application::commands::CommandHandler;
-use crate::application::commands::logout::LogoutCommand;
+use crate::application::commands::auth::logout::LogoutCommand;
 use crate::infrastructure::di::container::UseCases;
 use async_graphql::{Context, Object, Result};
 use std::sync::Arc;

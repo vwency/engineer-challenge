@@ -1,16 +1,15 @@
-use crate::application::usecases::health_check::HealthCheck;
-use actix_web::{HttpResponse, Responder, get};
-use tracing::instrument;
+use crate::application::queries::QueryHandler;
+use crate::application::queries::health_check::{HealthCheckQuery, HealthCheckQueryHandler};
+use actix_web::{HttpResponse, Responder, get, web};
 
 #[get("/health")]
-#[instrument]
 async fn health() -> impl Responder {
-    let use_case = HealthCheck;
-    let result = use_case.execute();
-    HttpResponse::Ok().body(result)
+    let handler = HealthCheckQueryHandler;
+    match handler.handle(HealthCheckQuery).await {
+        Ok(result) => HttpResponse::Ok().body(result),
+        Err(_) => HttpResponse::ServiceUnavailable().finish(),
+    }
 }
-
-use actix_web::web;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(health);

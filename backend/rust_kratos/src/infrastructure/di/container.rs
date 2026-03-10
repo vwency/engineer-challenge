@@ -1,9 +1,12 @@
 use crate::application::{
     bootstrap::config::Config,
     commands::{
-        login::LoginCommandHandler, logout::LogoutCommandHandler, recovery::RecoveryCommandHandler,
-        register::RegisterCommandHandler, settings::UpdateSettingsCommandHandler,
-        verification::VerificationCommandHandler,
+        account::{
+            recovery::RecoveryCommandHandler, settings::UpdateSettingsCommandHandler,
+            verification::VerificationCommandHandler,
+        },
+        auth::{login::LoginCommandHandler, logout::LogoutCommandHandler},
+        identity::register::RegisterCommandHandler,
     },
     queries::get_current_user::GetCurrentUserQueryHandler,
 };

@@ -1,5 +1,5 @@
 use crate::application::commands::CommandHandler;
-use crate::application::commands::login::LoginCommand;
+use crate::application::commands::auth::login::LoginCommand;
 use crate::domain::ports::login::LoginCredentials;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;

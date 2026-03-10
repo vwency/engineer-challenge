@@ -1,5 +1,5 @@
 use crate::application::commands::CommandHandler;
-use crate::application::commands::register::RegisterCommand;
+use crate::application::commands::identity::register::RegisterCommand;
 use crate::domain::ports::registration::RegistrationData;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;

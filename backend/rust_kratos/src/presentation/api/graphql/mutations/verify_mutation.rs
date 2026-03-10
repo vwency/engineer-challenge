@@ -1,5 +1,5 @@
 use crate::application::commands::CommandHandler;
-use crate::application::commands::verification::{
+use crate::application::commands::account::verification::{
     SendVerificationCodeCommand, SubmitVerificationCodeCommand, VerifyByLinkCommand,
 };
 use crate::infrastructure::di::container::UseCases;

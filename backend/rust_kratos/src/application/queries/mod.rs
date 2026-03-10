@@ -7,3 +7,4 @@ pub trait QueryHandler<Q, R>: Send + Sync {
 }
 
 pub mod get_current_user;
+pub mod health_check;
