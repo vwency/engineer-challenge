@@ -2,7 +2,7 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=vwency_engineer-challenge&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=vwency_engineer-challenge) [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=vwency_engineer-challenge&metric=bugs)](https://sonarcloud.io/summary/new_code?id=vwency_engineer-challenge) [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=vwency_engineer-challenge&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=vwency_engineer-challenge) ![License](https://img.shields.io/github/license/vwency/engineer-challenge)
 
 ## Description  
-Проект реализует функции восстановление пароля, регистрация, авторизации, максимально приближенные к prod-ready решениям.  
+Проект реализует функции восстановление пароля, регистрация, авторизации, максимально приближенные к prod-ready решениям. С кэшированием в valkey(open source форк redis)
  
 ## Architecture
 
@@ -24,12 +24,14 @@
 **ADR References:**  
 - [Cookie-based Session Authentication](./docs/adr/0001-cookie-session.md)  
 - [GraphQL Gateway Architecture](./docs/adr/0002-graphql-gateway.md)  
+- [Valkey Cache for Session Profiles](./docs/adr/0003-valkey-cache.md)  
 
 ## Tech stack
 1. **GraphQL**, поскольку поддерживает в запросе `Set-Cookies`, и дает Backward Compatibility.    
 2. **Yarn berry** большое сообщество, кастомизация.  
 3. **NX** время сборки, уменьшение времени на CI.  
 4. **Rust** строгая типипизация, гарантия доставки, гибкость в архитектуре.
+5. **Valkey**  Поддержка — Valkey поддерживается крупными компаниями: AWS, Google, Oracle, Ericsson. Redis Ltd. — единственный вендор Redis OSS.
 
 
 ## Trade-offs
@@ -43,10 +45,10 @@
 Auth-сервис сам по себе — это один BC в рамках большей системы. Дробить BC внутри сервиса — это over-engineering, если нет реальных причин.
 
 ### Continue
-1. Написание сервиса `rust_hydra`, и сервиса для экстракции identity из access_token, кастомная реализация с кастомным payload для jwt.
-2. Кэширование GetCurrentUserQuery в redis, при подготовке к prod-ready.
-3. GitOps — чтение новых helm релизов и их применение.
-4. Coverage тесты в CI, codecov, SonarQube.  
+1. Написание сервиса `session_manager`, для генерации jwt на opaque токене kratos.
+2. GitOps — чтение новых helm релизов и их применение.
+3. Coverage тесты в CI, codecov, SonarQube.  
+4. Нагрузочные тесты на GetCurrentUserQuery, Commands
 
 Схема command запроса:
 ```mermaid
@@ -70,6 +72,27 @@ flowchart TD
     KratosAuthenticationAdapter -->|SessionCookie| LoginCommandHandler
     LoginCommandHandler -->|session_token| GQL
     GQL -->|Set-Cookie| GQLResponse[GraphQL Response]
+```
+
+Реализация кэша redis для запрос Query, что бы не загружать postgres.
+```mermaid
+flowchart TD
+    GQL[GraphQL Gateway]
+    GQL -->|cookie from request| GetCurrentUserQuery
+    GetCurrentUserQuery -->|cookie Option| GetCurrentUserQueryHandler
+    GetCurrentUserQueryHandler -->|extract ory_kratos_session token| CacheKey[cache_key: user_profile:token]
+    CacheKey --> RedisLookup{Redis GET}
+    RedisLookup -->|HIT| Deserialize[serde_json::from_str]
+    Deserialize -->|UserProfile| GQLResponse[GraphQL Response]
+    RedisLookup -->|MISS| IdentityPort
+    IdentityPort -->|get_current_user cookie| KratosIdentityAdapter
+    KratosIdentityAdapter -->|GET /sessions/whoami| Kratos
+    Kratos -->|401 Unauthorized| AuthError[AuthError::NotAuthenticated]
+    AuthError --> GQLError[GraphQL Error]
+    Kratos -->|SessionResponse| KratosIdentityAdapter
+    KratosIdentityAdapter -->|traits.into| UserProfile
+    UserProfile -->|serde_json::to_string| RedisSet[Redis SET EX cache_ttl_secs]
+    RedisSet --> GQLResponse
 ```
 
 Валидация входных данных:
@@ -98,7 +121,7 @@ make up
 
 ## Testing  
 
-Для запуска тестов в kratos требуется поднятие инфры (kratos, postgres, mailhog):
+Для запуска тестов в kratos требуется поднятие инфры (kratos, postgres, mailhog, redis):
 ```bash
 cd web/backend/rust_kratos && make infra-up && cargo test ; cd ../../../
 ```
