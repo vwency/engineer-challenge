@@ -1,5 +1,8 @@
 use rust_kratos::domain::ports::login::{AuthenticationPort, LoginCredentials};
+use rust_kratos::domain::value_objects::email::Email;
+use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
+
 #[path = "../common/mod.rs"]
 mod common;
 use common::TestContext;
@@ -20,8 +23,8 @@ async fn test_complete_login_with_invalid_credentials() {
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
-        identifier: "nonexistent@example.com".to_string(),
-        password: "wrongpassword".to_string(),
+        identifier: Email::new("nonexistent@example.com").unwrap(),
+        password: Password::new("wrongpassword").unwrap(),
         address: None,
         code: None,
         resend: None,
@@ -39,8 +42,8 @@ async fn test_register_then_login() {
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
-        identifier: email.clone(),
-        password: password.to_string(),
+        identifier: Email::new(&email).unwrap(),
+        password: Password::new(password).unwrap(),
         address: None,
         code: None,
         resend: None,
@@ -116,8 +119,8 @@ async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> S
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
-        identifier: email.to_string(),
-        password: password.to_string(),
+        identifier: Email::new(email).unwrap(),
+        password: Password::new(password).unwrap(),
         address: None,
         code: None,
         resend: None,

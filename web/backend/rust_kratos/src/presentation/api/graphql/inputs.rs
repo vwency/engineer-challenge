@@ -1,12 +1,14 @@
-use async_graphql::InputObject;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
+use crate::domain::errors::DomainError;
 use crate::domain::ports::login::LoginCredentials;
 use crate::domain::ports::recovery::RecoveryRequest;
 use crate::domain::ports::registration::RegistrationData;
 use crate::domain::ports::settings::SettingsData;
 use crate::domain::ports::verification::{SendCodeRequest, SubmitCodeRequest, VerifyByLinkRequest};
+use crate::domain::value_objects::email::Email;
+use crate::domain::value_objects::password::Password;
+use async_graphql::InputObject;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(InputObject, Clone)]
 pub struct RegisterInput {
@@ -60,65 +62,79 @@ pub struct UpdateSettingsInput {
     pub transient_payload: Option<Value>,
 }
 
-impl From<LoginInput> for LoginCredentials {
-    fn from(input: LoginInput) -> Self {
-        Self {
-            identifier: input.identifier,
-            password: input.password,
+impl TryFrom<LoginInput> for LoginCredentials {
+    type Error = DomainError;
+
+    fn try_from(input: LoginInput) -> Result<Self, Self::Error> {
+        Ok(Self {
+            identifier: Email::new(input.identifier)?,
+            password: Password::new(input.password)?,
             address: input.address,
             code: input.code,
             resend: input.resend,
-        }
+        })
     }
 }
 
-impl From<RecoveryInput> for RecoveryRequest {
-    fn from(input: RecoveryInput) -> Self {
-        Self { email: input.email }
+impl TryFrom<RecoveryInput> for RecoveryRequest {
+    type Error = DomainError;
+
+    fn try_from(input: RecoveryInput) -> Result<Self, Self::Error> {
+        Ok(Self {
+            email: Email::new(input.email)?,
+        })
     }
 }
 
-impl From<RegisterInput> for RegistrationData {
-    fn from(input: RegisterInput) -> Self {
-        Self {
-            email: input.email,
+impl TryFrom<RegisterInput> for RegistrationData {
+    type Error = DomainError;
+
+    fn try_from(input: RegisterInput) -> Result<Self, Self::Error> {
+        Ok(Self {
+            email: Email::new(input.email)?,
             username: input.username.unwrap_or_default(),
-            password: input.password,
+            password: Password::new(input.password)?,
             geo_location: input.geo_location,
-        }
+        })
     }
 }
 
-impl From<UpdateSettingsInput> for SettingsData {
-    fn from(input: UpdateSettingsInput) -> Self {
-        Self {
+impl TryFrom<UpdateSettingsInput> for SettingsData {
+    type Error = DomainError;
+
+    fn try_from(input: UpdateSettingsInput) -> Result<Self, Self::Error> {
+        Ok(Self {
             method: input.method,
-            password: input.password,
+            password: input.password.map(Password::new).transpose()?,
             traits: input.traits,
             lookup_secret_confirm: input.lookup_secret_confirm,
             lookup_secret_disable: input.lookup_secret_disable,
             lookup_secret_regenerate: input.lookup_secret_regenerate,
             lookup_secret_reveal: input.lookup_secret_reveal,
             transient_payload: input.transient_payload,
-        }
+        })
     }
 }
 
-impl From<VerifyByLinkInput> for VerifyByLinkRequest {
-    fn from(input: VerifyByLinkInput) -> Self {
-        Self {
-            email: input.email,
+impl TryFrom<VerifyByLinkInput> for VerifyByLinkRequest {
+    type Error = DomainError;
+
+    fn try_from(input: VerifyByLinkInput) -> Result<Self, Self::Error> {
+        Ok(Self {
+            email: Email::new(input.email)?,
             transient_payload: input.transient_payload,
-        }
+        })
     }
 }
 
-impl From<SendVerificationCodeInput> for SendCodeRequest {
-    fn from(input: SendVerificationCodeInput) -> Self {
-        Self {
-            email: input.email,
+impl TryFrom<SendVerificationCodeInput> for SendCodeRequest {
+    type Error = DomainError;
+
+    fn try_from(input: SendVerificationCodeInput) -> Result<Self, Self::Error> {
+        Ok(Self {
+            email: Email::new(input.email)?,
             transient_payload: input.transient_payload,
-        }
+        })
     }
 }
 

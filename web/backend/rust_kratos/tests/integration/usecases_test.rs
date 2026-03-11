@@ -14,10 +14,11 @@ use rust_kratos::application::queries::QueryHandler;
 use rust_kratos::application::queries::get_current_user::{
     GetCurrentUserQuery, GetCurrentUserQueryHandler,
 };
-use rust_kratos::domain::ports::login::LoginCredentials;
 use rust_kratos::domain::ports::recovery::RecoveryRequest;
 use rust_kratos::domain::ports::registration::RegistrationData;
 use rust_kratos::domain::ports::settings::SettingsData;
+use rust_kratos::domain::value_objects::email::Email;
+use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::{
     identity::KratosIdentityAdapter, login::KratosAuthenticationAdapter,
     logout::KratosSessionAdapter, recovery::KratosRecoveryAdapter,
@@ -69,8 +70,8 @@ async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> S
     let result = handler
         .handle(RegisterCommand {
             data: RegistrationData {
-                email: email.to_string(),
-                password: password.to_string(),
+                email: Email::new(email).unwrap(),
+                password: Password::new(password).unwrap(),
                 username: format!("user_{}", uuid::Uuid::new_v4()),
                 geo_location: None,
             },
@@ -87,8 +88,8 @@ async fn test_register_command_returns_session_cookie() {
     let result = handler
         .handle(RegisterCommand {
             data: RegistrationData {
-                email: TestContext::random_email(),
-                password: "Test1234!@#$".to_string(),
+                email: Email::new(&TestContext::random_email()).unwrap(),
+                password: Password::new("Test1234!@#$").unwrap(),
                 username: format!("user_{}", uuid::Uuid::new_v4()),
                 geo_location: None,
             },
@@ -109,9 +110,9 @@ async fn test_login_command_returns_session_cookie() {
     let handler = make_login_handler(&ctx);
     let result = handler
         .handle(LoginCommand {
-            credentials: LoginCredentials {
-                identifier: email.clone(),
-                password: password.to_string(),
+            credentials: rust_kratos::domain::ports::login::LoginCredentials {
+                identifier: Email::new(&email).unwrap(),
+                password: Password::new(password).unwrap(),
                 address: None,
                 code: None,
                 resend: None,
@@ -129,9 +130,9 @@ async fn test_login_command_with_invalid_credentials_fails() {
     let handler = make_login_handler(&ctx);
     let result = handler
         .handle(LoginCommand {
-            credentials: LoginCredentials {
-                identifier: "nonexistent@example.com".to_string(),
-                password: "wrongpassword".to_string(),
+            credentials: rust_kratos::domain::ports::login::LoginCredentials {
+                identifier: Email::new("nonexistent@example.com").unwrap(),
+                password: Password::new("wrongpassword").unwrap(),
                 address: None,
                 code: None,
                 resend: None,
@@ -198,7 +199,9 @@ async fn test_recovery_command_with_valid_email() {
     let handler = make_recovery_handler(&ctx);
     let result = handler
         .handle(RecoveryCommand {
-            request: RecoveryRequest { email },
+            request: RecoveryRequest {
+                email: Email::new(&email).unwrap(),
+            },
             cookie: None,
         })
         .await;
@@ -212,7 +215,7 @@ async fn test_recovery_command_with_unknown_email() {
     let result = handler
         .handle(RecoveryCommand {
             request: RecoveryRequest {
-                email: "ghost@example.com".to_string(),
+                email: Email::new("ghost@example.com").unwrap(),
             },
             cookie: None,
         })
@@ -228,7 +231,7 @@ async fn test_update_settings_command_without_session_fails() {
         .handle(UpdateSettingsCommand {
             data: SettingsData {
                 method: "password".to_string(),
-                password: Some("NewPass1234!".to_string()),
+                password: Some(Password::new("NewPass1234!").unwrap()),
                 traits: None,
                 lookup_secret_confirm: None,
                 lookup_secret_disable: None,
@@ -253,7 +256,7 @@ async fn test_update_settings_command_with_valid_session() {
         .handle(UpdateSettingsCommand {
             data: SettingsData {
                 method: "password".to_string(),
-                password: Some("NewPass5678!@#$".to_string()),
+                password: Some(Password::new("NewPass5678!@#$").unwrap()),
                 traits: None,
                 lookup_secret_confirm: None,
                 lookup_secret_disable: None,

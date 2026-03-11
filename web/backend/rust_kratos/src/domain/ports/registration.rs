@@ -1,11 +1,13 @@
 use crate::domain::errors::DomainError;
+use crate::domain::value_objects::email::Email;
+use crate::domain::value_objects::password::Password;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
 pub struct RegistrationData {
-    pub email: String,
+    pub email: Email,
     pub username: String,
-    pub password: String,
+    pub password: Password,
     pub geo_location: Option<String>,
 }
 

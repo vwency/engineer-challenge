@@ -1,9 +1,9 @@
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::recovery::{RecoveryPort, RecoveryRequest};
-use crate::domain::value_objects::auth_method::AuthMethod;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
+use crate::infrastructure::adapters::kratos::models::recovery::RecoveryPayload;
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -17,13 +17,6 @@ impl KratosRecoveryAdapter {
     pub fn new(client: Arc<KratosClient>) -> Self {
         Self { client }
     }
-}
-
-#[derive(serde::Serialize)]
-struct RecoveryPayload {
-    method: AuthMethod,
-    email: String,
-    csrf_token: String,
 }
 
 fn map_recovery_error(e: KratosFlowError) -> DomainError {
@@ -54,11 +47,7 @@ impl RecoveryPort for KratosRecoveryAdapter {
         .await
         .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        let payload = RecoveryPayload {
-            method: AuthMethod::Link,
-            email: request.email,
-            csrf_token: flow.csrf_token.clone(),
-        };
+        let payload = RecoveryPayload::new(request.email.as_str(), flow.csrf_token.clone());
 
         let result = post_flow(
             &self.client.client,

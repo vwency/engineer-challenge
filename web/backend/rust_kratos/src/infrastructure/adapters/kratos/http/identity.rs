@@ -1,7 +1,7 @@
-use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::identity::IdentityPort;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
+use crate::infrastructure::adapters::kratos::models::identity::SessionResponse;
 use async_trait::async_trait;
 use reqwest::header;
 use std::sync::Arc;
@@ -16,26 +16,12 @@ impl KratosIdentityAdapter {
     }
 }
 
-#[derive(serde::Deserialize)]
-struct SessionResponse {
-    identity: Identity,
-}
-
-#[derive(serde::Deserialize)]
-struct Identity {
-    traits: Traits,
-}
-
-#[derive(serde::Deserialize)]
-struct Traits {
-    email: String,
-    username: String,
-    geo_location: Option<String>,
-}
-
 #[async_trait]
 impl IdentityPort for KratosIdentityAdapter {
-    async fn get_current_user(&self, cookie: &str) -> Result<UserProfile, DomainError> {
+    async fn get_current_user(
+        &self,
+        cookie: &str,
+    ) -> Result<crate::domain::entities::user_profile::UserProfile, DomainError> {
         let url =
             format!("{}/sessions/whoami", self.client.public_url).replace("localhost", "127.0.0.1");
 
@@ -57,16 +43,6 @@ impl IdentityPort for KratosIdentityAdapter {
             .await
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        Ok(UserProfile::from(session.identity.traits))
-    }
-}
-
-impl From<Traits> for UserProfile {
-    fn from(t: Traits) -> Self {
-        Self {
-            email: t.email,
-            username: t.username,
-            geo_location: t.geo_location,
-        }
+        Ok(session.identity.traits.into())
     }
 }

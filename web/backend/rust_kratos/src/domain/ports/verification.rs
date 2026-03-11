@@ -1,16 +1,17 @@
 use crate::domain::errors::DomainError;
+use crate::domain::value_objects::email::Email;
 use async_trait::async_trait;
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
 pub struct VerifyByLinkRequest {
-    pub email: String,
+    pub email: Email,
     pub transient_payload: Option<Value>,
 }
 
 #[derive(Debug, Clone)]
 pub struct SendCodeRequest {
-    pub email: String,
+    pub email: Email,
     pub transient_payload: Option<Value>,
 }
 

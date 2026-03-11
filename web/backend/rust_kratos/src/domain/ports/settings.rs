@@ -1,10 +1,11 @@
 use crate::domain::errors::DomainError;
+use crate::domain::value_objects::password::Password;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
 pub struct SettingsData {
     pub method: String,
-    pub password: Option<String>,
+    pub password: Option<Password>,
     pub traits: Option<serde_json::Value>,
     pub lookup_secret_confirm: Option<bool>,
     pub lookup_secret_disable: Option<bool>,

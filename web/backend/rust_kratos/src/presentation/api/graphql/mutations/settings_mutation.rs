@@ -2,7 +2,6 @@ use crate::application::commands::CommandHandler;
 use crate::application::commands::account::settings::{
     UpdateSettingsCommand, UpdateSettingsResult,
 };
-use crate::domain::ports::settings::SettingsData;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::UpdateSettingsInput;
@@ -22,7 +21,11 @@ impl SettingsMutation {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
 
         let command = UpdateSettingsCommand {
-            data: SettingsData::from(input),
+            data: input
+                .try_into()
+                .map_err(|e: crate::domain::errors::DomainError| {
+                    async_graphql::Error::new(e.to_string())
+                })?,
             cookie: extract_cookie(ctx).unwrap_or_default(),
         };
 

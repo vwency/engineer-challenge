@@ -1,12 +1,12 @@
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::login::{AuthenticationPort, LoginCredentials};
 use crate::domain::ports::session::SessionPort;
-use crate::domain::value_objects::auth_method::AuthMethod;
 use crate::domain::value_objects::session_cookie::SessionCookie;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
+use crate::infrastructure::adapters::kratos::models::login::LoginPayload;
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -23,38 +23,6 @@ impl KratosAuthenticationAdapter {
         Self {
             client,
             session_adapter,
-        }
-    }
-}
-
-#[derive(serde::Serialize)]
-struct LoginPayload {
-    method: AuthMethod,
-    identifier: String,
-    password: String,
-    csrf_token: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    address: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    code: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    resend: Option<String>,
-}
-
-impl LoginPayload {
-    fn from_credentials(credentials: LoginCredentials, csrf_token: String) -> Self {
-        Self {
-            method: if credentials.code.is_some() {
-                AuthMethod::Code
-            } else {
-                AuthMethod::Password
-            },
-            identifier: credentials.identifier,
-            password: credentials.password,
-            csrf_token,
-            address: credentials.address,
-            code: credentials.code,
-            resend: credentials.resend,
         }
     }
 }

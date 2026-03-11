@@ -1,10 +1,12 @@
 use crate::domain::errors::DomainError;
+use crate::domain::value_objects::email::Email;
+use crate::domain::value_objects::password::Password;
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
 pub struct LoginCredentials {
-    pub identifier: String,
-    pub password: String,
+    pub identifier: Email,
+    pub password: Password,
     pub address: Option<String>,
     pub code: Option<String>,
     pub resend: Option<String>,

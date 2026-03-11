@@ -1,6 +1,5 @@
 use crate::application::commands::CommandHandler;
 use crate::application::commands::identity::register::RegisterCommand;
-use crate::domain::ports::registration::RegistrationData;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::RegisterInput;
@@ -16,7 +15,11 @@ impl RegisterMutation {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
 
         let command = RegisterCommand {
-            data: RegistrationData::from(input),
+            data: input
+                .try_into()
+                .map_err(|e: crate::domain::errors::DomainError| {
+                    async_graphql::Error::new(e.to_string())
+                })?,
         };
 
         let result = use_cases

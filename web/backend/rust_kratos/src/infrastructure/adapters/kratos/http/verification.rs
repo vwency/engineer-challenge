@@ -6,6 +6,7 @@ use crate::domain::value_objects::auth_method::AuthMethod;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
+use crate::infrastructure::adapters::kratos::models::verification::VerificationPayload;
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -18,18 +19,6 @@ impl KratosVerificationAdapter {
     pub fn new(client: Arc<KratosClient>) -> Self {
         Self { client }
     }
-}
-
-#[derive(serde::Serialize)]
-struct VerificationPayload {
-    method: AuthMethod,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    code: Option<String>,
-    csrf_token: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    transient_payload: Option<serde_json::Value>,
 }
 
 fn map_verification_error(e: KratosFlowError) -> DomainError {
@@ -59,13 +48,13 @@ async fn execute_verification_flow(
         .await
         .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-    let payload = VerificationPayload {
+    let payload = VerificationPayload::new(
         method,
         email,
         code,
-        csrf_token: flow.csrf_token.clone(),
+        flow.csrf_token.clone(),
         transient_payload,
-    };
+    );
 
     post_flow(
         &client.client,
@@ -91,7 +80,7 @@ impl VerificationPort for KratosVerificationAdapter {
         execute_verification_flow(
             &self.client,
             AuthMethod::Link,
-            Some(request.email),
+            Some(request.email.as_str().to_string()),
             None,
             request.transient_payload,
             cookie,
@@ -107,7 +96,7 @@ impl VerificationPort for KratosVerificationAdapter {
         execute_verification_flow(
             &self.client,
             AuthMethod::Code,
-            Some(request.email),
+            Some(request.email.as_str().to_string()),
             None,
             request.transient_payload,
             cookie,

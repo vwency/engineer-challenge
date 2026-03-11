@@ -1,6 +1,5 @@
 use crate::application::commands::CommandHandler;
 use crate::application::commands::account::recovery::RecoveryCommand;
-use crate::domain::ports::recovery::RecoveryRequest;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::RecoveryInput;
 use async_graphql::{Context, Object, Result};
@@ -17,7 +16,11 @@ impl RecoveryMutation {
             .map_err(|e| async_graphql::Error::new(format!("DI error: {:?}", e)))?;
 
         let command = RecoveryCommand {
-            request: RecoveryRequest::from(input),
+            request: input
+                .try_into()
+                .map_err(|e: crate::domain::errors::DomainError| {
+                    async_graphql::Error::new(e.to_string())
+                })?,
             cookie: extract_cookie(ctx),
         };
 

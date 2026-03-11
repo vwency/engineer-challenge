@@ -1,10 +1,10 @@
 use crate::domain::errors::DomainError;
 use crate::domain::ports::registration::{RegistrationData, RegistrationPort};
-use crate::domain::value_objects::auth_method::AuthMethod;
 use crate::domain::value_objects::session_cookie::SessionCookie;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
+use crate::infrastructure::adapters::kratos::models::registration::RegistrationPayload;
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -17,22 +17,6 @@ impl KratosRegistrationAdapter {
     pub fn new(client: Arc<KratosClient>) -> Self {
         Self { client }
     }
-}
-
-#[derive(serde::Serialize)]
-struct RegistrationTraits {
-    email: String,
-    username: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    geo_location: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-struct RegistrationPayload {
-    method: AuthMethod,
-    password: String,
-    traits: RegistrationTraits,
-    csrf_token: String,
 }
 
 fn map_registration_error(e: KratosFlowError) -> DomainError {
@@ -76,16 +60,7 @@ impl RegistrationPort for KratosRegistrationAdapter {
         .await
         .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        let payload = RegistrationPayload {
-            method: AuthMethod::Password,
-            password: data.password,
-            traits: RegistrationTraits {
-                email: data.email,
-                username: data.username,
-                geo_location: data.geo_location,
-            },
-            csrf_token: flow.csrf_token.clone(),
-        };
+        let payload = RegistrationPayload::from_data(data, flow.csrf_token.clone());
 
         let result = post_flow(
             &self.client.client,

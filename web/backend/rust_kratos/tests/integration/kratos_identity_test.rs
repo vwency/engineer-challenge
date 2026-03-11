@@ -1,5 +1,6 @@
 use rust_kratos::domain::ports::identity::IdentityPort;
 use rust_kratos::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
+
 #[path = "../common/mod.rs"]
 mod common;
 use common::TestContext;
@@ -48,6 +49,8 @@ async fn register_and_login(
 ) -> String {
     use rust_kratos::domain::ports::login::{AuthenticationPort, LoginCredentials};
     use rust_kratos::domain::value_objects::auth_method::AuthMethod;
+    use rust_kratos::domain::value_objects::email::Email;
+    use rust_kratos::domain::value_objects::password::Password;
     use rust_kratos::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
     use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
 
@@ -97,12 +100,14 @@ async fn register_and_login(
 
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
     let flow_id = adapter.initiate_login(None).await.unwrap();
+
     let credentials = LoginCredentials {
-        identifier: email.to_string(),
-        password: password.to_string(),
+        identifier: Email::new(email).unwrap(),
+        password: Password::new(password).unwrap(),
         address: None,
         code: None,
         resend: None,
     };
+
     adapter.complete_login(&flow_id, credentials).await.unwrap()
 }

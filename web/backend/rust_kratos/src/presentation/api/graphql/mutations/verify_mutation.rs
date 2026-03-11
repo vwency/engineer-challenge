@@ -21,7 +21,11 @@ impl VerificationMutation {
             .commands
             .verification
             .handle(VerifyByLinkCommand {
-                request: input.into(),
+                request: input
+                    .try_into()
+                    .map_err(|e: crate::domain::errors::DomainError| {
+                        async_graphql::Error::new(e.to_string())
+                    })?,
                 cookie: extract_cookie(ctx),
             })
             .await
@@ -41,7 +45,11 @@ impl VerificationMutation {
             .commands
             .verification
             .handle(SendVerificationCodeCommand {
-                request: input.into(),
+                request: input
+                    .try_into()
+                    .map_err(|e: crate::domain::errors::DomainError| {
+                        async_graphql::Error::new(e.to_string())
+                    })?,
                 cookie: extract_cookie(ctx),
             })
             .await

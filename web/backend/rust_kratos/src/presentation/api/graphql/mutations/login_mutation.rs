@@ -1,6 +1,5 @@
 use crate::application::commands::CommandHandler;
 use crate::application::commands::auth::login::LoginCommand;
-use crate::domain::ports::login::LoginCredentials;
 use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::LoginInput;
@@ -15,8 +14,14 @@ impl LoginMutation {
     async fn login(&self, ctx: &Context<'_>, input: LoginInput) -> Result<bool> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
 
+        let credentials = input
+            .try_into()
+            .map_err(|e: crate::domain::errors::DomainError| {
+                async_graphql::Error::new(e.to_string())
+            })?;
+
         let command = LoginCommand {
-            credentials: LoginCredentials::from(input),
+            credentials,
             cookie: extract_cookie(ctx),
         };
 

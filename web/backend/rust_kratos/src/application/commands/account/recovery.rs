@@ -24,10 +24,11 @@ impl RecoveryCommandHandler {
 impl CommandHandler<RecoveryCommand> for RecoveryCommandHandler {
     async fn handle(&self, command: RecoveryCommand) -> Result<(), DomainError> {
         info!(
-            email = &command.request.email,
+            email = command.request.email.as_str(),
             cookie_present = command.cookie.is_some(),
             "Starting recovery process"
         );
+
         self.recovery_port
             .initiate_recovery(command.request, command.cookie.as_deref())
             .await
@@ -35,6 +36,7 @@ impl CommandHandler<RecoveryCommand> for RecoveryCommandHandler {
                 error!(error = %e, "Recovery failed");
                 e
             })?;
+
         info!("Recovery email sent successfully");
         Ok(())
     }

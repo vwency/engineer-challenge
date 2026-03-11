@@ -1,9 +1,9 @@
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::settings::{SettingsData, SettingsPort};
-use crate::domain::value_objects::auth_method::AuthMethod;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
+use crate::infrastructure::adapters::kratos::models::settings::SettingsPayload;
 use async_trait::async_trait;
 use reqwest::StatusCode;
 use std::sync::Arc;
@@ -16,47 +16,6 @@ pub struct KratosSettingsAdapter {
 impl KratosSettingsAdapter {
     pub fn new(client: Arc<KratosClient>) -> Self {
         Self { client }
-    }
-}
-
-#[derive(serde::Serialize)]
-struct SettingsPayload {
-    method: AuthMethod,
-    csrf_token: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    password: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    traits: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    lookup_secret_confirm: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    lookup_secret_disable: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    lookup_secret_regenerate: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    lookup_secret_reveal: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    transient_payload: Option<serde_json::Value>,
-}
-
-impl SettingsPayload {
-    fn from_data(data: SettingsData, csrf_token: String) -> Self {
-        let method = match data.method.as_str() {
-            "password" => AuthMethod::Password,
-            "code" => AuthMethod::Code,
-            _ => AuthMethod::Link,
-        };
-        Self {
-            method,
-            csrf_token,
-            password: data.password,
-            traits: data.traits,
-            lookup_secret_confirm: data.lookup_secret_confirm,
-            lookup_secret_disable: data.lookup_secret_disable,
-            lookup_secret_regenerate: data.lookup_secret_regenerate,
-            lookup_secret_reveal: data.lookup_secret_reveal,
-            transient_payload: data.transient_payload,
-        }
     }
 }
 

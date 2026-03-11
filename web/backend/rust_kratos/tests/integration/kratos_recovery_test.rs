@@ -1,4 +1,5 @@
 use rust_kratos::domain::ports::recovery::{RecoveryPort, RecoveryRequest};
+use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::infrastructure::adapters::kratos::http::recovery::KratosRecoveryAdapter;
 
 #[path = "../common/mod.rs"]
@@ -9,16 +10,14 @@ use common::TestContext;
 async fn test_initiate_recovery_with_nonexistent_email_succeeds() {
     let ctx = TestContext::new();
     let adapter = KratosRecoveryAdapter::new(ctx.client.clone());
-
     let result = adapter
         .initiate_recovery(
             RecoveryRequest {
-                email: "nonexistent@example.com".to_string(),
+                email: Email::new("nonexistent@example.com").unwrap(),
             },
             None,
         )
         .await;
-
     assert!(result.is_ok());
 }
 
@@ -27,16 +26,21 @@ async fn test_initiate_recovery_with_existing_email_succeeds() {
     let ctx = TestContext::new();
     let email = register_user(&ctx).await;
     let adapter = KratosRecoveryAdapter::new(ctx.client.clone());
-
     let result = adapter
-        .initiate_recovery(RecoveryRequest { email }, None)
+        .initiate_recovery(
+            RecoveryRequest {
+                email: Email::new(&email).unwrap(),
+            },
+            None,
+        )
         .await;
-
     assert!(result.is_ok());
 }
 
 async fn register_user(ctx: &TestContext) -> String {
     use rust_kratos::domain::ports::registration::{RegistrationData, RegistrationPort};
+    use rust_kratos::domain::value_objects::email::Email;
+    use rust_kratos::domain::value_objects::password::Password;
     use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;
 
     let email = TestContext::random_email();
@@ -47,9 +51,9 @@ async fn register_user(ctx: &TestContext) -> String {
         .complete_registration(
             &flow_id,
             RegistrationData {
-                email: email.clone(),
+                email: Email::new(&email).unwrap(),
                 username: format!("user_{}", uuid::Uuid::new_v4()),
-                password: "Test1234!@#$".to_string(),
+                password: Password::new("Test1234!@#$").unwrap(),
                 geo_location: None,
             },
         )
