@@ -13,3 +13,7 @@ accept_invalid_certs = true
 host = "0.0.0.0"
 port = 8080
 cors_allowed_origins = ["*"]
+
+[redis]
+url = "redis://valkey:6379"
+cache_ttl_secs = 300

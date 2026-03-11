@@ -1,6 +1,7 @@
 use crate::domain::errors::{AuthError, DomainError};
 use crate::domain::ports::identity::IdentityPort;
 use crate::domain::ports::session::SessionPort;
+use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
 use async_trait::async_trait;
@@ -10,14 +11,16 @@ use std::sync::Arc;
 pub struct KratosSessionAdapter {
     client: Arc<KratosClient>,
     identity_adapter: KratosIdentityAdapter,
+    cache: Option<RedisCache>,
 }
 
 impl KratosSessionAdapter {
-    pub fn new(client: Arc<KratosClient>) -> Self {
-        let identity_adapter = KratosIdentityAdapter::new(client.clone());
+    pub fn new(client: Arc<KratosClient>, cache: Option<RedisCache>) -> Self {
+        let identity_adapter = KratosIdentityAdapter::new(client.clone(), None, 0);
         Self {
             client,
             identity_adapter,
+            cache,
         }
     }
 
@@ -94,6 +97,14 @@ impl KratosSessionAdapter {
             .map(|s| s.to_string())
             .ok_or_else(|| DomainError::InvalidData("Logout URL not found".into()))
     }
+
+    fn extract_session_token(cookie: &str) -> Option<String> {
+        cookie
+            .split(';')
+            .find(|s| s.trim().starts_with("ory_kratos_session="))
+            .and_then(|s| s.trim().strip_prefix("ory_kratos_session="))
+            .map(|s| s.to_string())
+    }
 }
 
 #[async_trait]
@@ -110,7 +121,7 @@ impl SessionPort for KratosSessionAdapter {
             .await
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
 
-        match response.status() {
+        let result = match response.status() {
             s if s.is_success() || s == StatusCode::FOUND || s == StatusCode::SEE_OTHER => Ok(()),
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
                 Err(AuthError::NotAuthenticated.into())
@@ -122,7 +133,17 @@ impl SessionPort for KratosSessionAdapter {
                     error_text
                 )))
             }
+        };
+
+        if result.is_ok() {
+            if let Some(cache) = &self.cache {
+                if let Some(token) = Self::extract_session_token(cookie) {
+                    cache.delete(&format!("user_profile:{}", token)).await;
+                }
+            }
         }
+
+        result
     }
 
     async fn check_active_session(&self, cookie: Option<&str>) -> bool {

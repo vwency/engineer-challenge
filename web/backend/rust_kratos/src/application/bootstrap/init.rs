@@ -24,7 +24,8 @@ pub async fn run() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to reload log level: {}", e))?;
 
     info!("Starting application...");
-    let container = AppContainer::new(&config)?;
+
+    let container = AppContainer::new(&config).await?;
     let schema = Arc::new(create_schema(&container));
 
     tokio::select! {

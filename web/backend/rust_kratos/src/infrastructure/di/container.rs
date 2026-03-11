@@ -11,6 +11,7 @@ use crate::application::{
     queries::get_current_user::GetCurrentUserQueryHandler,
 };
 use crate::infrastructure::{
+    adapters::cache::redis_cache::RedisCache,
     adapters::kratos::client::KratosClient,
     di::{adapter_factory::AdapterFactory, factory::KratosAdapterFactory},
 };
@@ -66,13 +67,15 @@ pub struct AppContainer {
 }
 
 impl AppContainer {
-    pub fn new(config: &Config) -> Result<Self, ContainerError> {
+    pub async fn new(config: &Config) -> Result<Self, ContainerError> {
         Self::validate_config(config)?;
-
         let kratos = Arc::new(KratosClient::new(&config.kratos));
-        let factory = KratosAdapterFactory::from_client(kratos.clone());
+        let cache = RedisCache::new(&config.redis.url)
+            .await
+            .map_err(|e| ContainerError::Initialization(e.to_string()))?;
+        let factory =
+            KratosAdapterFactory::from_client(kratos.clone(), cache, config.redis.cache_ttl_secs);
         let use_cases = Arc::new(UseCases::new(&factory));
-
         Ok(Self { use_cases, kratos })
     }
 
@@ -90,6 +93,11 @@ impl AppContainer {
                 "Kratos public URL cannot be empty".into(),
             ));
         }
+        if config.redis.url.is_empty() {
+            return Err(ContainerError::InvalidConfig(
+                "Redis URL cannot be empty".into(),
+            ));
+        }
         Ok(())
     }
 }
@@ -98,10 +106,8 @@ impl AppContainer {
 pub enum ContainerError {
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
-
     #[error("Initialization failed: {0}")]
     Initialization(String),
-
     #[error("Factory creation failed: {0}")]
     FactoryCreation(String),
 }

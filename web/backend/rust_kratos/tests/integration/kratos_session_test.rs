@@ -2,7 +2,6 @@ use rust_kratos::domain::ports::session::SessionPort;
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
-
 #[path = "../common/mod.rs"]
 mod common;
 use common::TestContext;
@@ -10,7 +9,7 @@ use common::TestContext;
 #[tokio::test]
 async fn test_check_active_session_without_cookie_returns_false() {
     let ctx = TestContext::new();
-    let adapter = KratosSessionAdapter::new(ctx.client.clone());
+    let adapter = KratosSessionAdapter::new(ctx.client.clone(), None);
     let result = adapter.check_active_session(None).await;
     assert!(!result);
 }
@@ -18,7 +17,7 @@ async fn test_check_active_session_without_cookie_returns_false() {
 #[tokio::test]
 async fn test_check_active_session_with_invalid_cookie_returns_false() {
     let ctx = TestContext::new();
-    let adapter = KratosSessionAdapter::new(ctx.client.clone());
+    let adapter = KratosSessionAdapter::new(ctx.client.clone(), None);
     let result = adapter.check_active_session(Some("invalid=abc")).await;
     assert!(!result);
 }
@@ -26,7 +25,7 @@ async fn test_check_active_session_with_invalid_cookie_returns_false() {
 #[tokio::test]
 async fn test_logout_with_invalid_cookie_returns_error() {
     let ctx = TestContext::new();
-    let adapter = KratosSessionAdapter::new(ctx.client.clone());
+    let adapter = KratosSessionAdapter::new(ctx.client.clone(), None);
     let result = adapter.logout("invalid=abc").await;
     assert!(result.is_err());
 }
@@ -35,7 +34,7 @@ async fn test_logout_with_invalid_cookie_returns_error() {
 async fn test_logout_after_login_succeeds() {
     let ctx = TestContext::new();
     let session_cookie = register_and_login(&ctx).await;
-    let adapter = KratosSessionAdapter::new(ctx.client.clone());
+    let adapter = KratosSessionAdapter::new(ctx.client.clone(), None);
     let result = adapter.logout(&session_cookie).await;
     assert!(result.is_ok());
 }
@@ -44,7 +43,7 @@ async fn test_logout_after_login_succeeds() {
 async fn test_session_inactive_after_logout() {
     let ctx = TestContext::new();
     let session_cookie = register_and_login(&ctx).await;
-    let adapter = KratosSessionAdapter::new(ctx.client.clone());
+    let adapter = KratosSessionAdapter::new(ctx.client.clone(), None);
     adapter.logout(&session_cookie).await.unwrap();
     let result = adapter.check_active_session(Some(&session_cookie)).await;
     assert!(!result);
@@ -106,7 +105,6 @@ async fn register_and_login(ctx: &TestContext) -> String {
 
     let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
     let flow_id = adapter.initiate_login(None).await.unwrap();
-
     let credentials = LoginCredentials {
         identifier: Email::new(&email).unwrap(),
         password: Password::new(password).unwrap(),
@@ -114,6 +112,5 @@ async fn register_and_login(ctx: &TestContext) -> String {
         code: None,
         resend: None,
     };
-
     adapter.complete_login(&flow_id, credentials).await.unwrap()
 }

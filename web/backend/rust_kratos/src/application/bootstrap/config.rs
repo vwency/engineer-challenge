@@ -35,6 +35,14 @@ impl Environment {
 pub struct Config {
     pub kratos: KratosConfig,
     pub server: ServerConfig,
+    pub redis: RedisConfig,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RedisConfig {
+    pub url: String,
+    #[serde(default = "default_cache_ttl")]
+    pub cache_ttl_secs: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -91,6 +99,9 @@ impl Config {
     }
 }
 
+fn default_cache_ttl() -> u64 {
+    300
+}
 fn default_timeout() -> u64 {
     120
 }

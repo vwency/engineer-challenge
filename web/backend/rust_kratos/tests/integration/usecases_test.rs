@@ -44,12 +44,15 @@ fn make_login_handler(ctx: &TestContext) -> LoginCommandHandler {
 fn make_logout_handler(ctx: &TestContext) -> LogoutCommandHandler {
     LogoutCommandHandler::new(std::sync::Arc::new(KratosSessionAdapter::new(
         ctx.client.clone(),
+        None,
     )))
 }
 
 fn make_get_current_user_handler(ctx: &TestContext) -> GetCurrentUserQueryHandler {
     GetCurrentUserQueryHandler::new(std::sync::Arc::new(KratosIdentityAdapter::new(
         ctx.client.clone(),
+        None,
+        0,
     )))
 }
 
