@@ -42,8 +42,9 @@
 
 ### Continue
 1. Написание сервиса `rust_hydra`, и сервиса для экстракции identity из access_token, кастомная реализация с кастомным payload для jwt.
-2. GitOps — чтение новых helm релизов и их применение.
-3. Coverage тесты в CI, codecov, SonarQube.  
+2. Кэширование GetCurrentUserQuery в redis, при подготовке к prod-ready.
+3. GitOps — чтение новых helm релизов и их применение.
+4. Coverage тесты в CI, codecov, SonarQube.  
 
 Схема command запроса:
 ```mermaid
