@@ -25,7 +25,7 @@
 - [Cookie-based Session Authentication](./docs/adr/0001-cookie-session.md)  
 - [GraphQL Gateway Architecture](./docs/adr/0002-graphql-gateway.md)  
 
-### Tech stack
+## Tech stack
 1. **GraphQL**, поскольку поддерживает в запросе `Set-Cookies`, и дает Backward Compatibility.    
 2. **Yarn berry** большое сообщество, кастомизация.  
 3. **NX** время сборки, уменьшение времени на CI.  
