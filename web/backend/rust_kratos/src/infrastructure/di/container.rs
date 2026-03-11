@@ -11,11 +11,13 @@ use crate::application::{
     queries::get_current_user::GetCurrentUserQueryHandler,
 };
 use crate::infrastructure::{
-    adapters::cache::redis_cache::RedisCache,
-    adapters::kratos::client::KratosClient,
-    di::{adapter_factory::AdapterFactory, factory::KratosAdapterFactory},
+    adapters::cache::redis_cache::RedisCache, adapters::kratos::client::KratosClient,
+    di::factory::KratosAdapterFactory,
 };
+
+use crate::infrastructure::di::adapter_factory::AdapterFactory;
 use std::sync::Arc;
+use std::time::Duration;
 use thiserror::Error;
 
 pub struct Commands {
@@ -69,14 +71,29 @@ pub struct AppContainer {
 impl AppContainer {
     pub async fn new(config: &Config) -> Result<Self, ContainerError> {
         Self::validate_config(config)?;
+
         let kratos = Arc::new(KratosClient::new(&config.kratos));
-        let cache = RedisCache::new(&config.redis.url)
+
+        kratos
+            .wait_until_ready()
             .await
-            .map_err(|e| ContainerError::Initialization(e.to_string()))?;
+            .map_err(|e| ContainerError::Initialization(format!("Kratos unavailable: {e}")))?;
+
+        let cache = RedisCache::new_with_retry(
+            &config.redis.url,
+            config.redis.max_retries,
+            Duration::from_millis(config.redis.retry_delay_ms),
+        )
+        .await
+        .map_err(|e| ContainerError::Initialization(format!("Redis unavailable: {e}")))?;
+
         let factory =
             KratosAdapterFactory::from_client(kratos.clone(), cache, config.redis.cache_ttl_secs);
-        let use_cases = Arc::new(UseCases::new(&factory));
-        Ok(Self { use_cases, kratos })
+
+        Ok(Self {
+            use_cases: Arc::new(UseCases::new(&factory)),
+            kratos,
+        })
     }
 
     pub fn use_cases(&self) -> Arc<UseCases> {

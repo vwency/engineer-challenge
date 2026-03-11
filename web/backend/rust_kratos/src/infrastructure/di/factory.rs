@@ -1,8 +1,9 @@
-use crate::application::bootstrap::config::KratosConfig;
 use crate::domain::ports::{
-    identity::IdentityPort, login::AuthenticationPort, recovery::RecoveryPort,
-    registration::RegistrationPort, session::SessionPort, settings::SettingsPort,
-    verification::VerificationPort,
+    inbound::{
+        login::AuthenticationPort, recovery::RecoveryPort, registration::RegistrationPort,
+        settings::SettingsPort, verification::VerificationPort,
+    },
+    outbound::{identity::IdentityPort, session::SessionPort},
 };
 use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
 use crate::infrastructure::adapters::kratos::{
@@ -24,14 +25,6 @@ pub struct KratosAdapterFactory {
 }
 
 impl KratosAdapterFactory {
-    pub fn new(config: &KratosConfig, cache: RedisCache, cache_ttl_secs: u64) -> Self {
-        Self {
-            client: Arc::new(KratosClient::new(config)),
-            cache,
-            cache_ttl_secs,
-        }
-    }
-
     pub fn from_client(client: Arc<KratosClient>, cache: RedisCache, cache_ttl_secs: u64) -> Self {
         Self {
             client,
@@ -47,8 +40,12 @@ impl AdapterFactory for KratosAdapterFactory {
     }
 
     fn create_authentication_adapter(&self) -> Arc<dyn AuthenticationPort> {
-        Arc::new(KratosAuthenticationAdapter::new(self.client.clone()))
+        Arc::new(KratosAuthenticationAdapter::new(
+            self.client.clone(),
+            self.create_session_adapter(),
+        ))
     }
+
     fn create_session_adapter(&self) -> Arc<dyn SessionPort> {
         Arc::new(KratosSessionAdapter::new(
             self.client.clone(),

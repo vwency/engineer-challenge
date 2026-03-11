@@ -1,6 +1,6 @@
 use crate::application::commands::CommandHandler;
 use crate::application::commands::auth::login::LoginCommand;
-use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
+use crate::infrastructure::adapters::http::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::LoginInput;
 use async_graphql::{Context, Object, Result};

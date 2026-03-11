@@ -43,6 +43,10 @@ pub struct RedisConfig {
     pub url: String,
     #[serde(default = "default_cache_ttl")]
     pub cache_ttl_secs: u64,
+    #[serde(default = "default_redis_max_retries")]
+    pub max_retries: u32,
+    #[serde(default = "default_redis_retry_delay")]
+    pub retry_delay_ms: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -80,10 +84,13 @@ pub struct ServerConfig {
 impl Config {
     pub fn from_env() -> Result<Self, config::ConfigError> {
         dotenvy::dotenv().ok();
+
         let environment = Environment::from_env();
         let config_filename = environment.config_filename();
         let config_path = format!("config/app/{}", config_filename);
+
         info!(path = %format!("{}.toml", config_path), "Loading config file");
+
         let builder = config::Config::builder()
             .add_source(
                 config::File::with_name(&config_path)
@@ -95,12 +102,19 @@ impl Config {
                     .separator("__")
                     .try_parsing(true),
             );
+
         builder.build()?.try_deserialize()
     }
 }
 
 fn default_cache_ttl() -> u64 {
     300
+}
+fn default_redis_max_retries() -> u32 {
+    5
+}
+fn default_redis_retry_delay() -> u64 {
+    2000
 }
 fn default_timeout() -> u64 {
     120

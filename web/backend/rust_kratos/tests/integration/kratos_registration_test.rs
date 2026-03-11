@@ -1,4 +1,4 @@
-use rust_kratos::domain::ports::registration::{RegistrationData, RegistrationPort};
+use rust_kratos::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;

@@ -1,16 +1,25 @@
-use rust_kratos::domain::ports::login::{AuthenticationPort, LoginCredentials};
+use rust_kratos::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials};
+use rust_kratos::domain::ports::outbound::session::SessionPort;
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
+use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
+use std::sync::Arc;
 
 #[path = "../common/mod.rs"]
 mod common;
 use common::TestContext;
 
+fn make_auth_adapter(ctx: &TestContext) -> KratosAuthenticationAdapter {
+    let session: Arc<dyn SessionPort> =
+        Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
+    KratosAuthenticationAdapter::new(ctx.client.clone(), session)
+}
+
 #[tokio::test]
 async fn test_initiate_login_returns_flow_id() {
     let ctx = TestContext::new();
-    let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
+    let adapter = make_auth_adapter(&ctx);
     let result = adapter.initiate_login(None).await;
     assert!(result.is_ok());
     let flow_id = result.unwrap();
@@ -20,7 +29,7 @@ async fn test_initiate_login_returns_flow_id() {
 #[tokio::test]
 async fn test_complete_login_with_invalid_credentials() {
     let ctx = TestContext::new();
-    let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
+    let adapter = make_auth_adapter(&ctx);
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
         identifier: Email::new("nonexistent@example.com").unwrap(),
@@ -39,7 +48,7 @@ async fn test_register_then_login() {
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     register_user(&ctx, &email, password).await;
-    let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
+    let adapter = make_auth_adapter(&ctx);
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
         identifier: Email::new(&email).unwrap(),
@@ -60,7 +69,7 @@ async fn test_initiate_login_with_active_session_returns_error() {
     let email = TestContext::random_email();
     let password = "Test1234!@#$";
     let session_cookie = register_and_login(&ctx, &email, password).await;
-    let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
+    let adapter = make_auth_adapter(&ctx);
     let result = adapter.initiate_login(Some(&session_cookie)).await;
     assert!(result.is_err());
 }
@@ -116,7 +125,7 @@ async fn register_user(ctx: &TestContext, email: &str, password: &str) {
 
 async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> String {
     register_user(ctx, email, password).await;
-    let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
+    let adapter = make_auth_adapter(ctx);
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
         identifier: Email::new(email).unwrap(),

@@ -1,4 +1,4 @@
-use crate::domain::ports::settings::SettingsData;
+use crate::domain::ports::inbound::settings::SettingsData;
 use crate::domain::value_objects::auth_method::AuthMethod;
 
 #[derive(serde::Serialize)]

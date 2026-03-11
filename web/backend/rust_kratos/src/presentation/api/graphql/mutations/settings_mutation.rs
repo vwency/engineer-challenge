@@ -2,7 +2,7 @@ use crate::application::commands::CommandHandler;
 use crate::application::commands::account::settings::{
     UpdateSettingsCommand, UpdateSettingsResult,
 };
-use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
+use crate::infrastructure::adapters::http::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::UpdateSettingsInput;
 use async_graphql::{Context, Object, Result};

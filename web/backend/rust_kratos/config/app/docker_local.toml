@@ -17,3 +17,5 @@ cors_allowed_origins = ["*"]
 [redis]
 url = "redis://valkey:6379"
 cache_ttl_secs = 300
+max_retries = 5
+retry_delay_ms = 2000

@@ -1,5 +1,5 @@
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::identity::IdentityPort;
+use crate::domain::ports::outbound::identity::IdentityPort;
 use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::models::identity::SessionResponse;

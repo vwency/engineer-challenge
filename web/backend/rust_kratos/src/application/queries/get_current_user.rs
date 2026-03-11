@@ -1,7 +1,7 @@
 use crate::application::queries::QueryHandler;
 use crate::domain::entities::user_profile::UserProfile;
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::IdentityPort;
+use crate::domain::ports::outbound::identity::IdentityPort;
 use async_trait::async_trait;
 use std::sync::Arc;
 

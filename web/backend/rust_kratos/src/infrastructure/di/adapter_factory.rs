@@ -1,7 +1,9 @@
 use crate::domain::ports::{
-    identity::IdentityPort, login::AuthenticationPort, recovery::RecoveryPort,
-    registration::RegistrationPort, session::SessionPort, settings::SettingsPort,
-    verification::VerificationPort,
+    inbound::{
+        login::AuthenticationPort, recovery::RecoveryPort, registration::RegistrationPort,
+        settings::SettingsPort, verification::VerificationPort,
+    },
+    outbound::{identity::IdentityPort, session::SessionPort},
 };
 use std::sync::Arc;
 

@@ -4,15 +4,10 @@ use std::time::Duration;
 
 #[derive(Clone)]
 pub struct KratosClient {
-    #[allow(unused)]
     pub client: Client,
-    #[allow(unused)]
     pub admin_url: String,
-    #[allow(unused)]
     pub public_url: String,
-    #[allow(unused)]
     pub max_retries: u32,
-    #[allow(unused)]
     pub retry_delay: Duration,
 }
 
@@ -38,7 +33,43 @@ impl KratosClient {
         }
     }
 
-    #[allow(unused)]
+    pub async fn wait_until_ready(&self) -> Result<(), reqwest::Error> {
+        let url = format!("{}/health/ready", self.public_url);
+        let mut last_err: Option<reqwest::Error> = None;
+
+        for attempt in 1..=self.max_retries {
+            match self.client.get(&url).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    tracing::info!(attempt, "Kratos is ready");
+                    return Ok(());
+                }
+                Ok(resp) => {
+                    tracing::warn!(
+                        attempt,
+                        max = self.max_retries,
+                        status = %resp.status(),
+                        "Kratos not ready, retrying in {:?}", self.retry_delay
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        attempt,
+                        max = self.max_retries,
+                        error = %e,
+                        "Kratos unreachable, retrying in {:?}", self.retry_delay
+                    );
+                    last_err = Some(e);
+                }
+            }
+
+            if attempt < self.max_retries {
+                tokio::time::sleep(self.retry_delay).await;
+            }
+        }
+
+        Err(last_err.expect("no error captured but Kratos never became ready"))
+    }
+
     pub async fn execute_with_retry<F, Fut, T, E>(&self, mut operation: F) -> Result<T, E>
     where
         F: FnMut() -> Fut,
@@ -46,21 +77,24 @@ impl KratosClient {
         E: std::fmt::Display,
     {
         let mut attempts = 0;
+
         loop {
             match operation().await {
                 Ok(result) => return Ok(result),
                 Err(e) => {
                     attempts += 1;
+
                     if attempts >= self.max_retries {
                         return Err(e);
                     }
+
                     tracing::warn!(
-                        "Request failed (attempt {}/{}): {}. Retrying in {:?}...",
-                        attempts,
-                        self.max_retries,
-                        e,
-                        self.retry_delay
+                        attempt = attempts,
+                        max = self.max_retries,
+                        error = %e,
+                        "Request failed, retrying in {:?}", self.retry_delay
                     );
+
                     tokio::time::sleep(self.retry_delay).await;
                 }
             }

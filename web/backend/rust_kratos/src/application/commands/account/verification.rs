@@ -1,6 +1,6 @@
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
-use crate::domain::ports::{
+use crate::domain::ports::inbound::verification::{
     SendCodeRequest, SubmitCodeRequest, VerificationPort, VerifyByLinkRequest,
 };
 use async_trait::async_trait;

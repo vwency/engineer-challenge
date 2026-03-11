@@ -14,9 +14,10 @@ use rust_kratos::application::queries::QueryHandler;
 use rust_kratos::application::queries::get_current_user::{
     GetCurrentUserQuery, GetCurrentUserQueryHandler,
 };
-use rust_kratos::domain::ports::recovery::RecoveryRequest;
-use rust_kratos::domain::ports::registration::RegistrationData;
-use rust_kratos::domain::ports::settings::SettingsData;
+use rust_kratos::domain::ports::inbound::recovery::RecoveryRequest;
+use rust_kratos::domain::ports::inbound::registration::RegistrationData;
+use rust_kratos::domain::ports::inbound::settings::SettingsData;
+use rust_kratos::domain::ports::outbound::session::SessionPort;
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::{
@@ -24,32 +25,33 @@ use rust_kratos::infrastructure::adapters::kratos::http::{
     logout::KratosSessionAdapter, recovery::KratosRecoveryAdapter,
     register::KratosRegistrationAdapter, settings::KratosSettingsAdapter,
 };
+use std::sync::Arc;
 
 #[path = "../common/mod.rs"]
 mod common;
 use common::TestContext;
 
+fn make_session_adapter(ctx: &TestContext) -> Arc<dyn SessionPort> {
+    Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None))
+}
+
 fn make_register_handler(ctx: &TestContext) -> RegisterCommandHandler {
-    RegisterCommandHandler::new(std::sync::Arc::new(KratosRegistrationAdapter::new(
-        ctx.client.clone(),
-    )))
+    RegisterCommandHandler::new(Arc::new(KratosRegistrationAdapter::new(ctx.client.clone())))
 }
 
 fn make_login_handler(ctx: &TestContext) -> LoginCommandHandler {
-    LoginCommandHandler::new(std::sync::Arc::new(KratosAuthenticationAdapter::new(
+    LoginCommandHandler::new(Arc::new(KratosAuthenticationAdapter::new(
         ctx.client.clone(),
+        make_session_adapter(ctx),
     )))
 }
 
 fn make_logout_handler(ctx: &TestContext) -> LogoutCommandHandler {
-    LogoutCommandHandler::new(std::sync::Arc::new(KratosSessionAdapter::new(
-        ctx.client.clone(),
-        None,
-    )))
+    LogoutCommandHandler::new(make_session_adapter(ctx))
 }
 
 fn make_get_current_user_handler(ctx: &TestContext) -> GetCurrentUserQueryHandler {
-    GetCurrentUserQueryHandler::new(std::sync::Arc::new(KratosIdentityAdapter::new(
+    GetCurrentUserQueryHandler::new(Arc::new(KratosIdentityAdapter::new(
         ctx.client.clone(),
         None,
         0,
@@ -57,15 +59,11 @@ fn make_get_current_user_handler(ctx: &TestContext) -> GetCurrentUserQueryHandle
 }
 
 fn make_recovery_handler(ctx: &TestContext) -> RecoveryCommandHandler {
-    RecoveryCommandHandler::new(std::sync::Arc::new(KratosRecoveryAdapter::new(
-        ctx.client.clone(),
-    )))
+    RecoveryCommandHandler::new(Arc::new(KratosRecoveryAdapter::new(ctx.client.clone())))
 }
 
 fn make_settings_handler(ctx: &TestContext) -> UpdateSettingsCommandHandler {
-    UpdateSettingsCommandHandler::new(std::sync::Arc::new(KratosSettingsAdapter::new(
-        ctx.client.clone(),
-    )))
+    UpdateSettingsCommandHandler::new(Arc::new(KratosSettingsAdapter::new(ctx.client.clone())))
 }
 
 async fn register_and_login(ctx: &TestContext, email: &str, password: &str) -> String {
@@ -113,7 +111,7 @@ async fn test_login_command_returns_session_cookie() {
     let handler = make_login_handler(&ctx);
     let result = handler
         .handle(LoginCommand {
-            credentials: rust_kratos::domain::ports::login::LoginCredentials {
+            credentials: rust_kratos::domain::ports::inbound::login::LoginCredentials {
                 identifier: Email::new(&email).unwrap(),
                 password: Password::new(password).unwrap(),
                 address: None,
@@ -133,7 +131,7 @@ async fn test_login_command_with_invalid_credentials_fails() {
     let handler = make_login_handler(&ctx);
     let result = handler
         .handle(LoginCommand {
-            credentials: rust_kratos::domain::ports::login::LoginCredentials {
+            credentials: rust_kratos::domain::ports::inbound::login::LoginCredentials {
                 identifier: Email::new("nonexistent@example.com").unwrap(),
                 password: Password::new("wrongpassword").unwrap(),
                 address: None,

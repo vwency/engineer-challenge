@@ -1,10 +1,9 @@
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::login::{AuthenticationPort, LoginCredentials};
-use crate::domain::ports::session::SessionPort;
+use crate::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials};
+use crate::domain::ports::outbound::session::SessionPort;
 use crate::domain::value_objects::session_cookie::SessionCookie;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
-use crate::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
 use crate::infrastructure::adapters::kratos::models::login::LoginPayload;
 use async_trait::async_trait;
@@ -14,16 +13,12 @@ use tracing::{debug, error};
 
 pub struct KratosAuthenticationAdapter {
     client: Arc<KratosClient>,
-    session_adapter: KratosSessionAdapter,
+    session: Arc<dyn SessionPort>,
 }
 
 impl KratosAuthenticationAdapter {
-    pub fn new(client: Arc<KratosClient>) -> Self {
-        let session_adapter = KratosSessionAdapter::new(client.clone(), None);
-        Self {
-            client,
-            session_adapter,
-        }
+    pub fn new(client: Arc<KratosClient>, session: Arc<dyn SessionPort>) -> Self {
+        Self { client, session }
     }
 }
 
@@ -41,15 +36,18 @@ fn map_login_error(e: KratosFlowError) -> DomainError {
 #[async_trait]
 impl AuthenticationPort for KratosAuthenticationAdapter {
     async fn initiate_login(&self, cookie: Option<&str>) -> Result<String, DomainError> {
-        let is_active = self.session_adapter.check_active_session(cookie).await;
-        let is_recovery = self.session_adapter.is_recovery_session(cookie).await;
+        let is_active = self.session.check_active_session(cookie).await;
+        let is_recovery = self.session.is_recovery_session(cookie).await;
+
         if is_active && !is_recovery {
             error!("Login attempt with an already active session");
             return Err(AuthError::AlreadyLoggedIn.into());
         }
+
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "login", None)
             .await
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+
         Ok(flow.flow_id.as_str().to_string())
     }
 
@@ -61,11 +59,14 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         let flow = fetch_flow(&self.client.client, &self.client.public_url, "login", None)
             .await
             .map_err(|e| DomainError::ServiceUnavailable(e.to_string()))?;
+
         let payload = LoginPayload::from_credentials(credentials, flow.csrf_token.clone());
+
         debug!(
             "Login payload: {}",
             serde_json::to_string_pretty(&payload).unwrap_or_default()
         );
+
         let result = post_flow(
             &self.client.client,
             &self.client.public_url,
@@ -76,8 +77,10 @@ impl AuthenticationPort for KratosAuthenticationAdapter {
         )
         .await
         .map_err(map_login_error)?;
+
         debug!("Received cookies: {:?}", result.cookies);
         debug!("Response data: {:?}", result.data);
+
         SessionCookie::find_in(result.cookies)
             .map(|c| c.as_str().to_string())
             .ok_or_else(|| {

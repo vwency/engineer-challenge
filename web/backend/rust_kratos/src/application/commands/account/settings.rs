@@ -1,6 +1,6 @@
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::DomainError;
-use crate::domain::ports::{SettingsData, SettingsPort};
+use crate::domain::ports::inbound::settings::{SettingsData, SettingsPort};
 use async_trait::async_trait;
 use std::sync::Arc;
 

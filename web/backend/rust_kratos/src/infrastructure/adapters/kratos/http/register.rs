@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::ports::registration::{RegistrationData, RegistrationPort};
+use crate::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
 use crate::domain::value_objects::session_cookie::SessionCookie;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};

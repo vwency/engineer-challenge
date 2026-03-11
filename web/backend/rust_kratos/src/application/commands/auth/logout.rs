@@ -1,6 +1,6 @@
 use crate::application::commands::CommandHandler;
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::SessionPort;
+use crate::domain::ports::outbound::session::SessionPort;
 use async_trait::async_trait;
 use std::sync::Arc;
 

@@ -1,6 +1,6 @@
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::identity::IdentityPort;
-use crate::domain::ports::session::SessionPort;
+use crate::domain::ports::outbound::identity::IdentityPort;
+use crate::domain::ports::outbound::session::SessionPort;
 use crate::infrastructure::adapters::cache::redis_cache::RedisCache;
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::identity::KratosIdentityAdapter;
@@ -24,41 +24,8 @@ impl KratosSessionAdapter {
         }
     }
 
-    pub async fn is_recovery_session(&self, cookie: Option<&str>) -> bool {
-        let Some(cookie) = cookie else { return false };
-
-        let url =
-            format!("{}/sessions/whoami", self.client.public_url).replace("localhost", "127.0.0.1");
-
-        let Ok(response) = self
-            .client
-            .client
-            .get(&url)
-            .header(header::COOKIE, cookie)
-            .send()
-            .await
-        else {
-            return false;
-        };
-
-        let Ok(data) = response.json::<serde_json::Value>().await else {
-            return false;
-        };
-
-        data["authentication_methods"]
-            .as_array()
-            .map(|methods| {
-                methods.iter().any(|m| {
-                    m["method"].as_str() == Some("link_recovery")
-                        || m["method"].as_str() == Some("code_recovery")
-                })
-            })
-            .unwrap_or(false)
-    }
-
     async fn get_logout_flow(&self, cookie: &str) -> Result<String, DomainError> {
-        let url = format!("{}/self-service/logout/browser", self.client.public_url)
-            .replace("localhost", "127.0.0.1");
+        let url = format!("{}/self-service/logout/browser", self.client.public_url);
 
         let response = self
             .client
@@ -147,13 +114,43 @@ impl SessionPort for KratosSessionAdapter {
     }
 
     async fn check_active_session(&self, cookie: Option<&str>) -> bool {
-        if let Some(cookie_value) = cookie {
-            return self
-                .identity_adapter
-                .get_current_user(cookie_value)
-                .await
-                .is_ok();
-        }
-        false
+        let Some(cookie_value) = cookie else {
+            return false;
+        };
+        self.identity_adapter
+            .get_current_user(cookie_value)
+            .await
+            .is_ok()
+    }
+
+    async fn is_recovery_session(&self, cookie: Option<&str>) -> bool {
+        let Some(cookie) = cookie else { return false };
+
+        let url = format!("{}/sessions/whoami", self.client.public_url);
+
+        let Ok(response) = self
+            .client
+            .client
+            .get(&url)
+            .header(header::COOKIE, cookie)
+            .send()
+            .await
+        else {
+            return false;
+        };
+
+        let Ok(data) = response.json::<serde_json::Value>().await else {
+            return false;
+        };
+
+        data["authentication_methods"]
+            .as_array()
+            .map(|methods| {
+                methods.iter().any(|m| {
+                    m["method"].as_str() == Some("link_recovery")
+                        || m["method"].as_str() == Some("code_recovery")
+                })
+            })
+            .unwrap_or(false)
     }
 }

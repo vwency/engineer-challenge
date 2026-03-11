@@ -1,5 +1,5 @@
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::verification::{
+use crate::domain::ports::inbound::verification::{
     SendCodeRequest, SubmitCodeRequest, VerificationPort, VerifyByLinkRequest,
 };
 use crate::domain::value_objects::auth_method::AuthMethod;

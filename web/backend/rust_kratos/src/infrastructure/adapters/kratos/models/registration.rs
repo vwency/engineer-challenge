@@ -1,4 +1,4 @@
-use crate::domain::ports::registration::RegistrationData;
+use crate::domain::ports::inbound::registration::RegistrationData;
 use crate::domain::value_objects::auth_method::AuthMethod;
 
 #[derive(serde::Serialize)]

@@ -1,4 +1,4 @@
-use rust_kratos::domain::ports::recovery::{RecoveryPort, RecoveryRequest};
+use rust_kratos::domain::ports::inbound::recovery::{RecoveryPort, RecoveryRequest};
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::infrastructure::adapters::kratos::http::recovery::KratosRecoveryAdapter;
 
@@ -38,7 +38,7 @@ async fn test_initiate_recovery_with_existing_email_succeeds() {
 }
 
 async fn register_user(ctx: &TestContext) -> String {
-    use rust_kratos::domain::ports::registration::{RegistrationData, RegistrationPort};
+    use rust_kratos::domain::ports::inbound::registration::{RegistrationData, RegistrationPort};
     use rust_kratos::domain::value_objects::email::Email;
     use rust_kratos::domain::value_objects::password::Password;
     use rust_kratos::infrastructure::adapters::kratos::http::register::KratosRegistrationAdapter;

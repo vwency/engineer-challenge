@@ -1,7 +1,9 @@
-use rust_kratos::domain::ports::session::SessionPort;
+use rust_kratos::domain::ports::outbound::session::SessionPort;
 use rust_kratos::domain::value_objects::email::Email;
 use rust_kratos::domain::value_objects::password::Password;
 use rust_kratos::infrastructure::adapters::kratos::http::logout::KratosSessionAdapter;
+use std::sync::Arc;
+
 #[path = "../common/mod.rs"]
 mod common;
 use common::TestContext;
@@ -50,7 +52,7 @@ async fn test_session_inactive_after_logout() {
 }
 
 async fn register_and_login(ctx: &TestContext) -> String {
-    use rust_kratos::domain::ports::login::{AuthenticationPort, LoginCredentials};
+    use rust_kratos::domain::ports::inbound::login::{AuthenticationPort, LoginCredentials};
     use rust_kratos::domain::value_objects::auth_method::AuthMethod;
     use rust_kratos::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
     use rust_kratos::infrastructure::adapters::kratos::http::login::KratosAuthenticationAdapter;
@@ -103,7 +105,9 @@ async fn register_and_login(ctx: &TestContext) -> String {
     .await
     .unwrap();
 
-    let adapter = KratosAuthenticationAdapter::new(ctx.client.clone());
+    let session: Arc<dyn SessionPort> =
+        Arc::new(KratosSessionAdapter::new(ctx.client.clone(), None));
+    let adapter = KratosAuthenticationAdapter::new(ctx.client.clone(), session);
     let flow_id = adapter.initiate_login(None).await.unwrap();
     let credentials = LoginCredentials {
         identifier: Email::new(&email).unwrap(),

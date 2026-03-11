@@ -1,4 +1,4 @@
-use crate::domain::ports::login::LoginCredentials;
+use crate::domain::ports::inbound::login::LoginCredentials;
 use crate::domain::value_objects::auth_method::AuthMethod;
 
 #[derive(serde::Serialize)]

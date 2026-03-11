@@ -1,6 +1,6 @@
 use crate::application::commands::CommandHandler;
 use crate::application::commands::identity::register::RegisterCommand;
-use crate::infrastructure::adapters::graphql::cookies::ResponseCookies;
+use crate::infrastructure::adapters::http::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::RegisterInput;
 use async_graphql::{Context, Object, Result};

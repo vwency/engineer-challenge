@@ -1,9 +1,11 @@
 use crate::domain::errors::DomainError;
-use crate::domain::ports::login::LoginCredentials;
-use crate::domain::ports::recovery::RecoveryRequest;
-use crate::domain::ports::registration::RegistrationData;
-use crate::domain::ports::settings::SettingsData;
-use crate::domain::ports::verification::{SendCodeRequest, SubmitCodeRequest, VerifyByLinkRequest};
+use crate::domain::ports::inbound::login::LoginCredentials;
+use crate::domain::ports::inbound::recovery::RecoveryRequest;
+use crate::domain::ports::inbound::registration::RegistrationData;
+use crate::domain::ports::inbound::settings::SettingsData;
+use crate::domain::ports::inbound::verification::{
+    SendCodeRequest, SubmitCodeRequest, VerifyByLinkRequest,
+};
 use crate::domain::value_objects::email::Email;
 use crate::domain::value_objects::password::Password;
 use async_graphql::InputObject;

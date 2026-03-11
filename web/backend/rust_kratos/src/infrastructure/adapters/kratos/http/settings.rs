@@ -1,5 +1,5 @@
 use crate::domain::errors::{AuthError, DomainError};
-use crate::domain::ports::settings::{SettingsData, SettingsPort};
+use crate::domain::ports::inbound::settings::{SettingsData, SettingsPort};
 use crate::infrastructure::adapters::kratos::client::KratosClient;
 use crate::infrastructure::adapters::kratos::http::flows::{fetch_flow, post_flow};
 use crate::infrastructure::adapters::kratos::models::errors::KratosFlowError;
