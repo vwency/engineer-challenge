@@ -6,6 +6,7 @@ use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::{
     SendVerificationCodeInput, SubmitVerificationCodeInput, VerifyByLinkInput,
 };
+use crate::presentation::api::graphql::mutations::extract_cookie;
 use async_graphql::{Context, Object, Result};
 use std::sync::Arc;
 
@@ -16,7 +17,6 @@ pub struct VerificationMutation;
 impl VerificationMutation {
     async fn verify_by_link(&self, ctx: &Context<'_>, input: VerifyByLinkInput) -> Result<bool> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
-
         use_cases
             .commands
             .verification
@@ -30,7 +30,6 @@ impl VerificationMutation {
             })
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-
         Ok(true)
     }
 
@@ -40,7 +39,6 @@ impl VerificationMutation {
         input: SendVerificationCodeInput,
     ) -> Result<bool> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
-
         use_cases
             .commands
             .verification
@@ -54,7 +52,6 @@ impl VerificationMutation {
             })
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-
         Ok(true)
     }
 
@@ -64,11 +61,9 @@ impl VerificationMutation {
         input: SubmitVerificationCodeInput,
     ) -> Result<bool> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
-
         let cookie = extract_cookie(ctx).ok_or_else(|| {
             async_graphql::Error::new("Cookie is required to submit verification code")
         })?;
-
         use_cases
             .commands
             .verification
@@ -78,11 +73,6 @@ impl VerificationMutation {
             })
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-
         Ok(true)
     }
-}
-
-fn extract_cookie(ctx: &Context<'_>) -> Option<String> {
-    ctx.data_opt::<Option<String>>().and_then(|opt| opt.clone())
 }

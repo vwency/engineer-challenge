@@ -5,6 +5,7 @@ use crate::application::commands::account::settings::{
 use crate::infrastructure::adapters::http::cookies::ResponseCookies;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::UpdateSettingsInput;
+use crate::presentation::api::graphql::mutations::extract_cookie;
 use async_graphql::{Context, Object, Result};
 use std::sync::Arc;
 
@@ -19,7 +20,6 @@ impl SettingsMutation {
         input: UpdateSettingsInput,
     ) -> Result<String> {
         let use_cases = ctx.data_unchecked::<Arc<UseCases>>();
-
         let command = UpdateSettingsCommand {
             data: input
                 .try_into()
@@ -28,24 +28,17 @@ impl SettingsMutation {
                 })?,
             cookie: extract_cookie(ctx).unwrap_or_default(),
         };
-
         let UpdateSettingsResult { flow_id, messages } = use_cases
             .commands
             .update_settings
             .handle(command)
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-
         if let Some(response_cookies) = ctx.data_opt::<ResponseCookies>() {
             for message in messages {
                 response_cookies.add_cookie(message).await;
             }
         }
-
         Ok(flow_id)
     }
-}
-
-fn extract_cookie(ctx: &Context<'_>) -> Option<String> {
-    ctx.data_opt::<Option<String>>().and_then(|opt| opt.clone())
 }

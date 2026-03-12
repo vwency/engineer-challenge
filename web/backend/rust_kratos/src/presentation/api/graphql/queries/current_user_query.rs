@@ -2,6 +2,7 @@ use crate::application::queries::QueryHandler;
 use crate::application::queries::get_current_user::GetCurrentUserQuery;
 use crate::infrastructure::di::container::UseCases;
 use crate::presentation::api::graphql::inputs::UserProfileOutput;
+use crate::presentation::api::graphql::queries::extract_cookie;
 use async_graphql::{Context, Object, Result};
 use std::sync::Arc;
 
@@ -22,8 +23,4 @@ impl CurrentUserQuery {
             .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))
     }
-}
-
-fn extract_cookie(ctx: &Context<'_>) -> Option<String> {
-    ctx.data_opt::<Option<String>>().and_then(|opt| opt.clone())
 }
