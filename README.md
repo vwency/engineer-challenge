@@ -1,7 +1,7 @@
 # Auth Service
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=vwency_engineer-challenge&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=vwency_engineer-challenge) [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=vwency_engineer-challenge&metric=bugs)](https://sonarcloud.io/summary/new_code?id=vwency_engineer-challenge) [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=vwency_engineer-challenge&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=vwency_engineer-challenge) ![License](https://img.shields.io/github/license/vwency/engineer-challenge)
 
-## Description  
+## Description 
 Проект реализует функции восстановление пароля, регистрация, авторизации, максимально приближенные к prod-ready решениям. С кэшированием в valkey(open source форк redis)
  
 ## Architecture
@@ -25,6 +25,7 @@
 - [Cookie-based Session Authentication](./docs/adr/0001-cookie-session.md)  
 - [GraphQL Gateway Architecture](./docs/adr/0002-graphql-gateway.md)  
 - [Valkey Cache for Session Profiles](./docs/adr/0003-valkey-cache.md)  
+- [Rate Limiting GraphQL](./docs/adr/0004-rate-limiting-graphql.md)
 
 ## Tech stack
 1. **GraphQL**, поскольку поддерживает в запросе `Set-Cookies`, и дает Backward Compatibility.    
@@ -51,23 +52,38 @@ Auth-сервис сам по себе — это один BC в рамках б
 
 Схема command запроса:
 ```mermaid
-flowchart TD
+flowchart LR
     GQL[GraphQL Gateway]
-    GQL -->|LoginInput| TryFrom[TryFrom]
-    TryFrom -->|Email + Password VO| LoginCommand
-    TryFrom -->|Err| GQLError[GraphQL Error]
-    LoginCommand --> LoginCommandHandler
-    LoginCommandHandler -->|initiate_login cookie| AuthenticationPort
-    AuthenticationPort -->|initiate_login cookie| KratosAuthenticationAdapter
-    KratosAuthenticationAdapter -->|whoami| Kratos
-    Kratos -->|SessionStatus| KratosAuthenticationAdapter
-    KratosAuthenticationAdapter -->|fetch_flow| Kratos
-    Kratos -->|flow_id + csrf_token| KratosAuthenticationAdapter
-    LoginCommandHandler -->|complete_login credentials| AuthenticationPort
-    AuthenticationPort -->|complete_login credentials| KratosAuthenticationAdapter
-    KratosAuthenticationAdapter -->|build| LoginPayload[LoginPayload\nInfra Model]
-    LoginPayload -->|POST flow| Kratos
-    Kratos -->|SessionCookie| KratosAuthenticationAdapter
+    GQL -->|UserIp X-Forwarded-For| RateLimit{RateLimiter}
+    RateLimit -->|Exceeded| GQLError[GraphQL Error]
+    RateLimit -->|OK| TryFrom
+
+    subgraph Validation
+        TryFrom -->|Email + Password VO| LoginCommand
+        TryFrom -->|Err| GQLError
+    end
+
+    subgraph Application
+        LoginCommand --> LoginCommandHandler
+    end
+
+    subgraph Initiate
+        LoginCommandHandler -->|initiate_login cookie| AuthenticationPort
+        AuthenticationPort --> KratosAuthenticationAdapter
+        KratosAuthenticationAdapter -->|whoami| Kratos
+        Kratos -->|SessionStatus| KratosAuthenticationAdapter
+        KratosAuthenticationAdapter -->|fetch_flow| Kratos
+        Kratos -->|flow_id + csrf_token| KratosAuthenticationAdapter
+    end
+
+    subgraph Complete
+        LoginCommandHandler -->|complete_login credentials| AuthenticationPort
+        AuthenticationPort --> KratosAuthenticationAdapter
+        KratosAuthenticationAdapter -->|build| LoginPayload[LoginPayload Infra Model]
+        LoginPayload -->|POST flow| Kratos
+        Kratos -->|SessionCookie| KratosAuthenticationAdapter
+    end
+
     KratosAuthenticationAdapter -->|SessionCookie| LoginCommandHandler
     LoginCommandHandler -->|session_token| GQL
     GQL -->|Set-Cookie| GQLResponse[GraphQL Response]
@@ -77,17 +93,24 @@ flowchart TD
 ```mermaid
 flowchart TD
     GQL[GraphQL Gateway]
+    GQL -->|UserIp from X-Forwarded-For| RateLimit{RateLimiter}
+    RateLimit -->|Exceeded| GQLError[GraphQL Error]
+    RateLimit -->|OK| GetCurrentUserQuery
     GQL -->|cookie from request| GetCurrentUserQuery
+
     GetCurrentUserQuery -->|cookie Option| GetCurrentUserQueryHandler
-    GetCurrentUserQueryHandler -->|extract ory_kratos_session token| CacheKey[cache_key: user_profile:token]
+    GetCurrentUserQueryHandler -->|extract session token| CacheKey[cache_key: user_profile:token]
+
     CacheKey --> RedisLookup{Redis GET}
     RedisLookup -->|HIT| Deserialize[serde_json::from_str]
     Deserialize -->|UserProfile| GQLResponse[GraphQL Response]
+
     RedisLookup -->|MISS| IdentityPort
     IdentityPort -->|get_current_user cookie| KratosIdentityAdapter
     KratosIdentityAdapter -->|GET /sessions/whoami| Kratos
     Kratos -->|401 Unauthorized| AuthError[AuthError::NotAuthenticated]
-    AuthError --> GQLError[GraphQL Error]
+    AuthError --> GQLError
+
     Kratos -->|SessionResponse| KratosIdentityAdapter
     KratosIdentityAdapter -->|traits.into| UserProfile
     UserProfile -->|serde_json::to_string| RedisSet[Redis SET EX cache_ttl_secs]
@@ -97,16 +120,22 @@ flowchart TD
 Валидация входных данных:
 ```mermaid
 flowchart LR
-    Input[GraphQL Input] --> TryFrom[TryFrom]
-    TryFrom --> VO["VO валидация
-Email / Password"]
+    Input[GraphQL Input]
+    Input --> TryFrom[TryFrom]
+
+    TryFrom --> VO[VO Email / Password]
+
     VO -->|Ok| Domain[Domain Object]
     VO -->|Err| Error[GraphQL Error]
+
     Domain --> Handler[CommandHandler]
     Handler --> Adapter[KratosAdapter]
+
     Adapter --> Models[Infra Models]
     Models --> Kratos[Kratos]
+
     Kratos --> Response[FlowResult / PostFlowResult]
+
     Response --> Adapter
     Adapter --> Handler
     Handler --> GQLResponse[GraphQL Response]
