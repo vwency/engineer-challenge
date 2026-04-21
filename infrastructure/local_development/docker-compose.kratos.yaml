@@ -1,0 +1,61 @@
+services:
+  postgres-kratos:
+    image: docker.io/postgres:17-alpine
+    container_name: postgres-kratos
+    environment:
+      POSTGRES_USER: kratos
+      POSTGRES_PASSWORD: kratos_secret
+      POSTGRES_DB: kratos
+    ports:
+      - "5433:5432"
+    volumes:
+      - kratos-db-data:/var/lib/postgresql/data
+    networks:
+      - kratos-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kratos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kratos-migrate:
+    image: docker.io/oryd/kratos:v1.3.0
+    container_name: kratos-migrate
+    environment:
+      DSN: postgres://kratos:kratos_secret@postgres-kratos:5432/kratos?sslmode=disable
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    volumes:
+      - ./config/kratos:/etc/config/kratos
+    networks:
+      - kratos-network
+    depends_on:
+      postgres-kratos:
+        condition: service_healthy
+    restart: on-failure
+
+  kratos:
+    image: docker.io/oryd/kratos:v1.3.0
+    container_name: kratos
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    ports:
+      - "4433:4433"
+      - "4434:4434"
+    environment:
+      LOG_LEVEL: debug
+    volumes:
+      - ./config/kratos:/etc/config/kratos
+    networks:
+      - kratos-network
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+networks:
+  kratos-network:
+    driver: bridge
+    name: kratos-network
+
+volumes:
+  kratos-db-data:
+    name: kratos-db-data

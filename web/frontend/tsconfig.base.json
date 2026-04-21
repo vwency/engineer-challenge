@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.paths.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": "..",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "paths": {
+      "@/*": [
+        "entrypoint/src/*"
+      ],
+      "@ui/buttons": [
+        "packages/ui/buttons/src"
+      ],
+      "@ui/placeholder": [
+        "packages/ui/placeholder/src"
+      ],
+      "@ui/auth-desc-text": [
+        "packages/ui/auth-desc-text/src"
+      ],
+      "@auth-footer": [
+        "packages/ui/auth-footer/src"
+      ],
+      "@placeholder-title": [
+        "packages/ui/placeholder-title/src"
+      ],
+      "@pages/login": [
+        "packages/pages/login/src"
+      ],
+      "@pages/registration": [
+        "packages/pages/registration/src"
+      ],
+      "@pages/recovery": [
+        "packages/pages/recovery/src"
+      ],
+      "@pages/recovery-sent": [
+        "packages/pages/recovery-sent/src"
+      ],
+      "@pages/settings": [
+        "packages/pages/settings/src"
+      ],
+      "@pages/settings-success": [
+        "packages/pages/settings-success/src"
+      ],
+      "@pages/settings-error": [
+        "packages/pages/settings-error/src"
+      ],
+      "@widgets/login": [
+        "packages/widgets/login/src"
+      ],
+      "@widgets/recovery": [
+        "packages/widgets/recovery/src"
+      ],
+      "@store/auth": [
+        "packages/store/auth/src"
+      ],
+      "@store/root": [
+        "packages/store/root/src"
+      ],
+      "@widgets/registration": [
+        "packages/widgets/registration"
+      ],
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

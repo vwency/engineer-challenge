@@ -1,0 +1,52 @@
+name: Push Helm to OCI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "infrastructure/helm/rust-kratos-chart/**"
+      - "infrastructure/helm/frontend-entrypoint-chart/**"
+
+jobs:
+  trigger-helm-push-backend:
+    uses: vwency/workflow/.github/workflows/helm-push-ghcr.yaml@main
+    with:
+      chart-path: "./infrastructure/helm/rust-kratos-chart"
+      registry-suffix: "engineer-challenge"
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  trigger-helm-push-frontend:
+    uses: vwency/workflow/.github/workflows/helm-push-ghcr.yaml@main
+    with:
+      chart-path: "./infrastructure/helm/frontend-entrypoint-chart"
+      registry-suffix: "engineer-challenge"
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  trigger-cleanup-backend:
+    needs: [trigger-helm-push-backend]
+    uses: vwency/workflow/.github/workflows/clean-registry.yaml@main
+    with:
+      owner: ${{ github.repository_owner }}
+      repository: engineer-challenge
+      package: engineer-challenge/rust-kratos-chart
+      keep_n_tagged: 2
+      dry_run: false
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  trigger-cleanup-frontend:
+    needs: [trigger-helm-push-frontend]
+    uses: vwency/workflow/.github/workflows/clean-registry.yaml@main
+    with:
+      owner: ${{ github.repository_owner }}
+      repository: engineer-challenge
+      package: engineer-challenge/frontend-entrypoint-chart
+      keep_n_tagged: 2
+      dry_run: false
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}

@@ -1,0 +1,16 @@
+{
+  "name": "k6_tests",
+  "packageManager": "yarn@4.9.2",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node build.js && k6 run dist/main.js",
+    "test:smoke": "node build.js && k6 run --vus 5 --duration 30s dist/main.js",
+    "test:report": "node build.js && k6 run --out json=results.json dist/main.js",
+    "test:vv": "node build.js && k6 run dist/main.js --summary-export=summary.json && node ./scripts/print_500.js"
+  },
+  "devDependencies": {
+    "@types/k6": "^1.7.0",
+    "esbuild": "^0.27.4",
+    "typescript": "^5.9.3"
+  }
+}

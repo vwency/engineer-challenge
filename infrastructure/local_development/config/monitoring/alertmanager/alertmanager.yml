@@ -1,0 +1,44 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ["alertname", "cluster", "service"]
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: "default-receiver"
+  routes:
+    - match:
+        severity: critical
+      receiver: "critical-receiver"
+      continue: true
+    - match:
+        severity: warning
+      receiver: "warning-receiver"
+
+receivers:
+  - name: "default-receiver"
+    # Здесь можно добавить webhook, email, slack и т.д.
+    # webhook_configs:
+    #   - url: 'http://example.com/webhook'
+
+  - name: "critical-receiver"
+    # Пример для критических алертов
+    # slack_configs:
+    #   - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+    #     channel: '#alerts-critical'
+    #     title: 'Critical Alert'
+
+  - name: "warning-receiver"
+    # Пример для предупреждений
+    # slack_configs:
+    #   - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+    #     channel: '#alerts-warning'
+    #     title: 'Warning Alert'
+
+inhibit_rules:
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname", "cluster", "service"]

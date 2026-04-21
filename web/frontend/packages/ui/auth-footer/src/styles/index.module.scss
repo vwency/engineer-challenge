@@ -1,0 +1,38 @@
+.footer {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid rgba(31, 31, 39, 0.08);
+  padding: 2rem;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+}
+
+.text {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: #81869a;
+  display: flex;
+  align-items: center;
+}
+
+.link {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: #31a0f0;
+  text-decoration: none;
+  text-align: center;
+  display: flex;
+  align-items: center;
+}

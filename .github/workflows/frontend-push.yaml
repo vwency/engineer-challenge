@@ -1,0 +1,43 @@
+name: Build Docker Images (Frontend)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "web/frontend/**"
+
+jobs:
+  trigger-build:
+    uses: vwency/workflow/.github/workflows/buildx.yaml@main
+    with:
+      image-name: ${{ github.repository }}/frontend-entrypoint
+      context: "./web/frontend"
+      dockerfile: "./web/frontend/Dockerfile"
+      build-args: |
+        NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8080/graphql
+        NEXT_INTERNAL_GRAPHQL_URL=http://rust_kratos:8080/graphql
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: trigger-build
+    steps:
+      - name: Deploy to environment
+        run: |
+          echo "Deploying application"
+
+  trigger-cleanup:
+    needs: [trigger-build]
+    uses: vwency/workflow/.github/workflows/clean-registry.yaml@main
+    with:
+      owner: ${{ github.repository_owner }}
+      repository: engineer-challenge
+      package: engineer-challenge/frontend-entrypoint
+      keep_n_tagged: 2
+      dry_run: false
+    secrets:
+      personal_access_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}

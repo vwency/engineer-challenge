@@ -1,0 +1,4 @@
+[submodule "web/backend/rust_kratos"]
+	path = web/backend/rust_kratos
+	url = git@github.com:justventure/rust_kratos.git
+    branch = main
